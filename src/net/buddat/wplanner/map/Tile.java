@@ -15,6 +15,12 @@ public class Tile {
 	
 	public static final int NULL_COLOUR = 16777215;
 	
+	/*
+	 * For use in GUI Actions
+	 */
+	public static final int LAYER_COUNT = 2;
+	public static final int TOP_LAYER = 0, CAVE_LAYER = 1;
+	
 	public static final int LEFT_FENCE = 0, TOP_FENCE = 1;
 	public static final int OBJECT_COUNT = 9, FENCE_COUNT = 2;
 	

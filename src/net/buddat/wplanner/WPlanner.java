@@ -13,6 +13,8 @@ import java.util.prefs.Preferences;
 import javax.swing.JFileChooser;
 
 import net.buddat.wplanner.config.Config;
+import net.buddat.wplanner.gui.CrashDialog;
+import net.buddat.wplanner.gui.LoadingFrame;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.map.MapManager;
 import net.buddat.wplanner.util.Constants;
@@ -21,7 +23,7 @@ import net.buddat.wplanner.util.Logger;
 public class WPlanner {
 	
 	private MapManager mapManager;
-	private String baseDir;
+	private static String baseDir;
 	private static Config config;
 
 	private MultiInstanceServer miServer;
@@ -32,11 +34,16 @@ public class WPlanner {
 	}
 	
 	public WPlanner(String[] args) {
-		boolean anotherInstance = isInstanceRunning();
-		if (anotherInstance) {
+		LoadingFrame loading = new LoadingFrame();
+		loading.setVisible(true);
+		
+		loading.update("checking instance", 0);
+		if (isInstanceRunning()) {
 			if (args.length == 0) {
 				Logger.err("Another instance is running. Closing this instance.");
 				writeToInstance(Constants.NO_NEW_FILE_MSG);
+				
+				new CrashDialog("Another instance is running. Closing this instance.", null);
 			} else {
 				Logger.log("Another instance is running. Passing map file to other instance.");
 				writeToInstance(args[0]);
@@ -44,17 +51,31 @@ public class WPlanner {
 			System.exit(0);
 		} else {
 			miServer = new MultiInstanceServer(this);
+			miServer.setName("MultiInstanceServer");
 			miServer.start();
 		}
 		
+		loading.update("loading config", 5);
 		loadConfig();
+		
+		loading.update("checking resources", 30);
 		initialChecks();
 		
-		mapManager = new MapManager();
+		mapManager = new MapManager(this);
 		
 		if (args.length > 0) {
-			loadMap(args[0]);
+			loading.update("loading map", 70);
+			mapManager.loadMap(args[0]);
 		}
+		
+		loading.update("complete", 100);
+		
+		/* Small pause so you can see the complete message. */
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) { }
+		
+		loading.dispose();
 	}
 
 	public void loadConfig() {
@@ -97,14 +118,14 @@ public class WPlanner {
 						if (f.exists())
 							Logger.log("Wurm folder from config exists, attempting to use.");
 						else
-							config.setWurmInstallDir(chooseDirectory("Wurm Install", null), true);
+							config.setWurmInstallDir(WPlanner.chooseDirectory("Wurm Install", null, true), true);
 					} else {
 						config.setWurmInstallDir(Preferences.userRoot().node(Constants.WURM_REGISTRY_NODE).get("wurm_dir", ""), true);
 					}
 				} else {
 					/* Wurm registry node doesn't exist. Set registry flag to false and allow the user to choose the install folder. */
 					config.setUseRegistry(false, true);
-					config.setWurmInstallDir(chooseDirectory("Wurm Install", null), true);
+					config.setWurmInstallDir(WPlanner.chooseDirectory("Wurm Install", null, true), true);
 				}
 			}
 			
@@ -126,7 +147,7 @@ public class WPlanner {
 			
 			File objectsDir = new File(config.getObjectsDir());
 			if (!objectsDir.exists()) {
-				String folder = chooseDirectory("Objects", baseDir);
+				String folder = WPlanner.chooseDirectory("Objects", baseDir, true);
 				Logger.log("Using user specified objects directory: " + folder);
 				
 				config.setObjectsDir(folder, true);
@@ -135,7 +156,7 @@ public class WPlanner {
 			
 			File fencesDir = new File(config.getFencesDir());
 			if (!fencesDir.exists()) {
-				String folder = chooseDirectory("Fences", baseDir);
+				String folder = WPlanner.chooseDirectory("Fences", baseDir, true);
 				Logger.log("Using user specified fences folder: " + folder);
 				
 				config.setFencesDir(folder, true);
@@ -148,29 +169,7 @@ public class WPlanner {
 		}
 	}
 	
-	public void loadMap(String mapFile) {
-		if (mapFile.endsWith(Constants.MAP_FILE_EXT)) {
-			Logger.log("Opening map: " + mapFile);
-			
-			String location;				
-			String mapName;
-			if (mapFile.contains("/")) {
-				location = mapFile.substring(0, mapFile.lastIndexOf("/"));
-				mapName = mapFile.substring(mapFile.lastIndexOf("/"), mapFile.lastIndexOf("."));
-			} else {
-				location = baseDir;
-				mapName = mapFile.substring(0, mapFile.lastIndexOf("."));
-			}
-			
-			config.setDefaultSaveDir(location, true);
-			
-			Map toLoad = new Map(mapName, 0, 0);
-			toLoad.loadMap(mapFile);
-			mapManager.addMap(mapName, toLoad);
-		}
-	}
-	
-	public String chooseDirectory(String name, String defaultPath) {
+	public static String chooseDirectory(String name, String defaultPath, boolean quitOnFail) {
 		Logger.err("Unable to find " + name + " directory. Allowing user to choose.");
 		
 		JFileChooser fc = new JFileChooser();
@@ -185,8 +184,10 @@ public class WPlanner {
 		if (fc.showDialog(null, "Accept") == JFileChooser.APPROVE_OPTION)
 			return fc.getSelectedFile().getAbsolutePath();
 		else {
-			Logger.err("Unable to start. No " + name + " directory found.");
-			System.exit(1);
+			if (quitOnFail) {
+				Logger.err("Unable to start. No " + name + " directory found.");
+				System.exit(1);
+			}
 		}
 		
 		return null;	
@@ -216,12 +217,12 @@ public class WPlanner {
 		return config;
 	}
 
-	public String getBaseDir() {
+	public static String getBaseDir() {
 		return baseDir;
 	}
 
 	public void setBaseDir(String baseDir) {
-		this.baseDir = baseDir;
+		WPlanner.baseDir = baseDir;
 	}
 
 	public MapManager getMapManager() {

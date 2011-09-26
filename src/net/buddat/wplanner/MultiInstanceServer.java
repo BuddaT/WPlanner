@@ -31,10 +31,11 @@ public class MultiInstanceServer extends Thread {
 				BufferedReader br = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 				
 				String newFile = br.readLine();
-				if (newFile != Constants.NO_NEW_FILE_MSG)
+				if (newFile.equals(Constants.NO_NEW_FILE_MSG))
 					Logger.log("No new map file specified.");
 				else {
-					wplanner.loadMap(newFile);
+					Logger.log("Recieved map to open from another instance.");
+					wplanner.getMapManager().loadMap(newFile);
 				}
 			}
 		} catch (IOException ioe) {

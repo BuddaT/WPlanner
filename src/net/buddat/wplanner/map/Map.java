@@ -37,9 +37,7 @@ public class Map {
 		saveMap(null);
 	}
 	
-	public void saveMap(String fileName) {
-		File saved = new File(WPlanner.getConfig().getDefaultSaveDir());
-		
+	public void saveMap(String fileName) {		
 		if (fileName == null)
 			fileName = WPlanner.getConfig().getDefaultSaveDir() + mapName + Constants.MAP_FILE_EXT;
 		if (!fileName.endsWith(Constants.MAP_FILE_EXT))
