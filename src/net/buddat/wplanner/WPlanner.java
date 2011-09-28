@@ -15,19 +15,21 @@ import javax.swing.JFileChooser;
 import net.buddat.wplanner.config.Config;
 import net.buddat.wplanner.gui.CrashDialog;
 import net.buddat.wplanner.gui.LoadingFrame;
-import net.buddat.wplanner.map.Map;
+import net.buddat.wplanner.gui.MainWindow;
 import net.buddat.wplanner.map.MapManager;
 import net.buddat.wplanner.util.Constants;
 import net.buddat.wplanner.util.Logger;
 
 public class WPlanner {
 	
-	private MapManager mapManager;
+	private static MapManager mapManager;
 	private static String baseDir;
 	private static Config config;
 
 	private MultiInstanceServer miServer;
 	private Socket clientSocket;
+	
+	private MainWindow mainWindow;
 	
 	public static void main(String[] args) {
 		new WPlanner(args);
@@ -35,7 +37,6 @@ public class WPlanner {
 	
 	public WPlanner(String[] args) {
 		LoadingFrame loading = new LoadingFrame();
-		loading.setVisible(true);
 		
 		loading.update("checking instance", 0);
 		if (isInstanceRunning()) {
@@ -43,7 +44,7 @@ public class WPlanner {
 				Logger.err("Another instance is running. Closing this instance.");
 				writeToInstance(Constants.NO_NEW_FILE_MSG);
 				
-				new CrashDialog("Another instance is running. Closing this instance.", null);
+				new CrashDialog(Constants.PROGRAM_NAME + " is already running.", null);
 			} else {
 				Logger.log("Another instance is running. Passing map file to other instance.");
 				writeToInstance(args[0]);
@@ -65,17 +66,15 @@ public class WPlanner {
 		
 		if (args.length > 0) {
 			loading.update("loading map", 70);
-			mapManager.loadMap(args[0]);
+			args[0] = mapManager.loadMap(args[0]);
 		}
 		
 		loading.update("complete", 100);
 		
-		/* Small pause so you can see the complete message. */
-		try {
-			Thread.sleep(100);
-		} catch (InterruptedException e) { }
+		mainWindow = new MainWindow();
 		
-		loading.dispose();
+		if (args.length > 0)
+			mainWindow.addMap(mapManager.getMap(args[0]));
 	}
 
 	public void loadConfig() {
@@ -225,12 +224,12 @@ public class WPlanner {
 		WPlanner.baseDir = baseDir;
 	}
 
-	public MapManager getMapManager() {
+	public static MapManager getMapManager() {
 		return mapManager;
 	}
-
-	public void setMapManager(MapManager mapManager) {
-		this.mapManager = mapManager;
+	
+	public MainWindow getMainWindow() {
+		return mainWindow;
 	}
 
 }

@@ -2,6 +2,8 @@ package net.buddat.wplanner.map;
 
 import java.util.HashMap;
 
+import javax.swing.JOptionPane;
+
 import net.buddat.wplanner.WPlanner;
 import net.buddat.wplanner.util.Constants;
 import net.buddat.wplanner.util.Logger;
@@ -36,8 +38,23 @@ public class MapManager {
 	}
 	
 	public void removeMap(String mapName) {
-		if (maps.containsKey(mapName))
+		
+		if (maps.containsKey(mapName)) {
+			Map toClose = maps.get(mapName);
+			if (toClose.hasChanges()) {
+				int response = JOptionPane.showConfirmDialog(null, "Changes have been made to " + mapName + ". Would you like to save?", "Save changes?",
+						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE, null);
+				
+				if (response == JOptionPane.YES_OPTION) {
+					toClose.saveMap();
+				} else if (response == JOptionPane.CANCEL_OPTION) {
+					return;
+				}
+			}
+			
 			maps.remove(mapName);
+			wplanner.getMainWindow().removeMap(mapName);
+		}
 	}
 	
 	public Map getMap(String mapName) {
@@ -52,7 +69,7 @@ public class MapManager {
 		maps.get(mapName).saveMap(path);
 	}
 	
-	public void loadMap(String mapFile) {
+	public String loadMap(String mapFile) {
 		if (mapFile.endsWith(Constants.MAP_FILE_EXT)) {
 			Logger.log("Opening map: " + mapFile);
 			
@@ -62,15 +79,18 @@ public class MapManager {
 				location = mapFile.substring(0, mapFile.lastIndexOf("/"));
 				mapName = mapFile.substring(mapFile.lastIndexOf("/") + 1, mapFile.lastIndexOf("."));
 			} else {
-				location = wplanner.getBaseDir();
+				location = WPlanner.getBaseDir();
 				mapName = mapFile.substring(0, mapFile.lastIndexOf("."));
 			}
 			
-			WPlanner.getConfig().setDefaultSaveDir(location, true);
+			WPlanner.getConfig().setDefaultSaveDir(location + "/", true);
 			
 			Map toLoad = new Map(mapName, 0, 0);
 			toLoad.loadMap(mapFile);
-			addMap(mapName, toLoad);
+			
+			return addMap(mapName, toLoad);
 		}
+		
+		return null;
 	}
 }

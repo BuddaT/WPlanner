@@ -20,7 +20,7 @@ public class LoadingFrame extends JFrame {
 		setResizable(false);
 		setTitle("Loading...please wait.");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		setBounds(0, 0, 200, 50);
+		setSize(200, 50);
 		setLocationRelativeTo(null);
 		setUndecorated(true);
 		
@@ -36,6 +36,8 @@ public class LoadingFrame extends JFrame {
 		progressBar.setStringPainted(true);
 		progressBar.setForeground(Color.GREEN);
 		contentPane.add(progressBar);
+		
+		setVisible(true);
 	}
 	
 	public void setMessage(String msg) {
@@ -50,5 +52,15 @@ public class LoadingFrame extends JFrame {
 	public void update(String newMessage, int newProgress) {
 		setMessage(newMessage);
 		setProgress(newProgress);
+		
+		if (newProgress >= 100) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			dispose();
+		}
 	}
 }

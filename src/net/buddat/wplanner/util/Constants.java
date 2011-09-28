@@ -38,6 +38,24 @@ public class Constants {
 	public static final String OPT_FENCES_FOLDER = "dir.fences";
 	public static final String OPT_SAVE_DIR = "dir.save.default";
 	
+	public static final String GUI_PENCIL = "/gui/pencil.png";
+	public static final String GUI_BRUSH = "/gui/brush.png";
+	public static final String GUI_LINE = "/gui/line.png";
+	public static final String GUI_FILL = "/gui/fill.png";
+	public static final String GUI_ERASER = "/gui/eraser.png";
+	public static final String GUI_PICKER = "/gui/picker.png";
+	public static final String GUI_ZOOM_IN = "/gui/zoomin.png";
+	public static final String GUI_ZOOM_OUT = "/gui/zoomout.png";
+	public static final String GUI_LAYER_UP = "/gui/layerup.png";
+	public static final String GUI_LAYER_DOWN = "/gui/layerdown.png";
+	public static final String GUI_NEW = "/gui/new.png";
+	public static final String GUI_OPEN = "/gui/open.png";
+	public static final String GUI_SAVE = "/gui/save.png";
+	public static final String GUI_SAVE_IMAGE = "/gui/saveimage.png";
+	public static final String GUI_LABEL = "/gui/label.png";
+	public static final String GUI_OVERLAY = "/gui/overlay.png";
+	public static final String GUI_COLOR_CHOOSER = "/gui/color.png";
+	
 	public static final String CFG_DELIMETER = "=";
 	public static final String CFG_COMMENT = "#";
 	

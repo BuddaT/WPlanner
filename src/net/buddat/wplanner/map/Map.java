@@ -22,6 +22,7 @@ public class Map {
 
 	private String mapName;
 	private int mapWidth, mapHeight;
+	private boolean changes = false;
 	
 	private HashMap<Point, Tile> tileMap = new HashMap<Point, Tile>();
 		
@@ -56,7 +57,7 @@ public class Map {
 		buffer.putInt(tileMap.size());
 		
 		for (Point p : tileMap.keySet())
-			buffer.put(getTile(p).getData());
+			buffer.put(getTile(p, false).getData());
 		
 		buffer.flip();
 		
@@ -215,11 +216,14 @@ public class Map {
 		tileMap.remove(p);
 	}
 
-	public Tile getTile(int x, int y) {
-		return getTile(new Point(x, y));
+	public Tile getTile(int x, int y, boolean toChange) {
+		return getTile(new Point(x, y), toChange);
 	}
 
-	public Tile getTile(Point point) {
+	public Tile getTile(Point point, boolean toChange) {
+		if (toChange)
+			changes = true;
+		
 		if (tileMap.containsKey(point))
 			return tileMap.get(point);
 		else
@@ -269,5 +273,9 @@ public class Map {
 		}
 		
 		tileMap = newMap;
+	}
+	
+	public boolean hasChanges() {
+		return changes;
 	}
 }

@@ -35,7 +35,9 @@ public class MultiInstanceServer extends Thread {
 					Logger.log("No new map file specified.");
 				else {
 					Logger.log("Recieved map to open from another instance.");
-					wplanner.getMapManager().loadMap(newFile);
+					String mapName = wplanner.getMapManager().loadMap(newFile);
+					
+					wplanner.getMainWindow().addMap(wplanner.getMapManager().getMap(mapName));
 				}
 			}
 		} catch (IOException ioe) {
