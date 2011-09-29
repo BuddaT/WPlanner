@@ -160,6 +160,17 @@ public class GraphicPanel extends JPanel {
 		return undoManager;
 	}
 	
+
+	public void undo() {
+		getUndoManager().undo();
+		repaint();
+	}
+	
+	public void redo() {
+		getUndoManager().redo();
+		repaint();
+	}
+	
 	public void revalidateScroll() {
 		this.setPreferredSize(new Dimension(map.getMapWidth() * this.tileSize, map.getMapHeight() * this.tileSize));
 		this.revalidate();

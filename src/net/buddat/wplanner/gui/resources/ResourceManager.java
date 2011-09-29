@@ -45,19 +45,19 @@ public class ResourceManager {
 	 * 
 	 * Funnily enough, it doesn't actually use any of the resources after it does this.
 	 */
-	private static final boolean NOT_DEBUG = false;
-	
+	private static final boolean DEBUG = true;
+
 	public ResourceManager() {
-		if (NOT_DEBUG) loading = new LoadingFrame();
+		if (!DEBUG) loading = new LoadingFrame();
 		
 		loadResources();
 		loadGuiImages();
 		
-		if (NOT_DEBUG) loading.update("complete", 100);
+		if (!DEBUG) loading.update("complete", 100);
 	}
 	
 	public void loadGuiImages() {
-		if (NOT_DEBUG) loading.update("gui images", 65);
+		if (!DEBUG) loading.update("gui images", 65);
 		
 		guiImages.put(Constants.GUI_PENCIL, new ImageIcon(this.getClass().getResource(Constants.GUI_PENCIL)));
 		guiImages.put(Constants.GUI_BRUSH, new ImageIcon(this.getClass().getResource(Constants.GUI_BRUSH)));
@@ -66,7 +66,7 @@ public class ResourceManager {
 		guiImages.put(Constants.GUI_ERASER, new ImageIcon(this.getClass().getResource(Constants.GUI_ERASER)));
 		guiImages.put(Constants.GUI_PICKER, new ImageIcon(this.getClass().getResource(Constants.GUI_PICKER)));
 		
-		if (NOT_DEBUG) loading.setProgress(75);
+		if (!DEBUG) loading.setProgress(75);
 		
 		guiImages.put(Constants.GUI_ZOOM_IN, new ImageIcon(this.getClass().getResource(Constants.GUI_ZOOM_IN)));
 		guiImages.put(Constants.GUI_ZOOM_OUT, new ImageIcon(this.getClass().getResource(Constants.GUI_ZOOM_OUT)));
@@ -74,14 +74,14 @@ public class ResourceManager {
 		guiImages.put(Constants.GUI_LAYER_UP, new ImageIcon(this.getClass().getResource(Constants.GUI_LAYER_UP)));
 		guiImages.put(Constants.GUI_LAYER_DOWN, new ImageIcon(this.getClass().getResource(Constants.GUI_LAYER_DOWN)));
 		
-		if (NOT_DEBUG) loading.setProgress(85);
+		if (!DEBUG) loading.setProgress(85);
 		
 		guiImages.put(Constants.GUI_NEW, new ImageIcon(this.getClass().getResource(Constants.GUI_NEW)));
 		guiImages.put(Constants.GUI_OPEN, new ImageIcon(this.getClass().getResource(Constants.GUI_OPEN)));
 		guiImages.put(Constants.GUI_SAVE, new ImageIcon(this.getClass().getResource(Constants.GUI_SAVE)));
 		guiImages.put(Constants.GUI_SAVE_IMAGE, new ImageIcon(this.getClass().getResource(Constants.GUI_SAVE_IMAGE)));
 		
-		if (NOT_DEBUG) loading.setProgress(95);
+		if (!DEBUG) loading.setProgress(95);
 		
 		guiImages.put(Constants.GUI_LABEL, new ImageIcon(this.getClass().getResource(Constants.GUI_LABEL)));
 		guiImages.put(Constants.GUI_OVERLAY, new ImageIcon(this.getClass().getResource(Constants.GUI_OVERLAY)));
@@ -96,7 +96,7 @@ public class ResourceManager {
 		String wurmDir = WPlanner.getConfig().getWurmInstallDir();
 		
 		try {
-			if (NOT_DEBUG) loading.update("terrain images", test);
+			if (!DEBUG) loading.update("terrain images", test);
 			/*
 			 * Load Terrain
 			 */
@@ -115,12 +115,12 @@ public class ResourceManager {
 					if (!je.isDirectory() && je.getName().contains("texture/terrain/")) {
 						terrainImgList.put(je.getName().substring(je.getName().lastIndexOf("/") + 1), 
 								ImageIO.read(jf.getInputStream(je)).getScaledInstance(128, 128, Image.SCALE_SMOOTH));
-						if (NOT_DEBUG) loading.setProgress(test++);
+						if (!DEBUG) loading.setProgress(test++);
 					}
 			
 			jf.close();
 			
-			if (NOT_DEBUG) loading.update("object images", 50);
+			if (!DEBUG) loading.update("object images", 50);
 			/*
 			 * Load Objects
 			 */
@@ -147,7 +147,7 @@ public class ResourceManager {
 						objectImgList.put(f.getName().substring(f.getName().lastIndexOf("/") + 1), rotatedImages);
 					}
 			
-			if (NOT_DEBUG) loading.update("fence images", 55);
+			if (!DEBUG) loading.update("fence images", 55);
 			/*
 			 * Load Fences
 			 */
@@ -173,7 +173,7 @@ public class ResourceManager {
 			ioe.printStackTrace();
 		}
 		
-		if (NOT_DEBUG) loading.update("sorting images", 60);
+		if (!DEBUG) loading.update("sorting images", 60);
 		Set<String> st = terrainImgList.keySet();
 		terrainKeyList = new ArrayList<String>(st); 
 		Collections.sort(terrainKeyList);
