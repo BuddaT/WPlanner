@@ -8,13 +8,15 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JViewport;
 import javax.swing.event.MouseInputAdapter;
 
+import net.buddat.wplanner.gui.action.BrushTileChange;
+import net.buddat.wplanner.gui.action.DraggedAction;
 import net.buddat.wplanner.gui.action.ObjectRotationChange;
 import net.buddat.wplanner.gui.action.TileChange;
+import net.buddat.wplanner.gui.action.TileFill;
 import net.buddat.wplanner.gui.undo.UndoManager;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.map.Tile;
@@ -27,12 +29,15 @@ public class GraphicPanel extends JPanel {
 		TERRAIN_PENCIL, TERRAIN_BRUSH, TERRAIN_ERASER, TERRAIN_FILL, TERRAIN_PICKER,
 		OBJECT_PENCIL, OBJECT_ERASER, OBJECT_PICKER,
 		FENCE_PENCIL, FENCE_LINE, FENCE_ERASER, FENCE_PICKER,
-		OVERLAY_PENCIL, OVERLAY_BRUSH, OVERLAY_ERASER, OVERLAY_FILL, OVERLAY_PICKER
+		OVERLAY_PENCIL, OVERLAY_BRUSH, OVERLAY_ERASER, OVERLAY_FILL, OVERLAY_PICKER, 
+		LABEL
 	}
 	
 	private MainWindow mainWindow;
 	private Map map;
 	private UndoManager undoManager;
+	
+	private DraggedAction currentDragAction;
 	
 	public static final int TILE_MAX_SIZE = 128, TILE_MIN_SIZE = 4, TILE_SIZE_STEP = 4;
 	private int tileSize = 48;
@@ -206,8 +211,7 @@ public class GraphicPanel extends JPanel {
 					}
 				}
 				if (m1_dragging)
-					/*if (parent.normalTool.isSelected())
-						clickedMouse(e.getPoint())*/;
+					draggedMouse(e.getPoint());
 				
 				mouseMoved(e);
 			}
@@ -224,16 +228,21 @@ public class GraphicPanel extends JPanel {
 					m_XDifference = e.getX();
 					m_YDifference = e.getY();
 					m2or3_dragging = true;
-				} else if (e.getButton() == MouseEvent.BUTTON1)
+				} else if (e.getButton() == MouseEvent.BUTTON1) {
 					m1_dragging = true;
+					currentDragAction = new DraggedAction();
+				}
 			}
 	
 			public void mouseReleased(MouseEvent e) {
 				if (e.getButton() == MouseEvent.BUTTON3 || e.getButton() == MouseEvent.BUTTON2) {
 					setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 					m2or3_dragging = false;
-				} else if (e.getButton() == MouseEvent.BUTTON1)
+				} else if (e.getButton() == MouseEvent.BUTTON1) {
 					m1_dragging = false;
+					if (!currentDragAction.isEmpty())
+						undoManager.addAction(currentDragAction);
+				}
 			}   
 			
 			public void mouseClicked(MouseEvent e) { 
@@ -248,9 +257,13 @@ public class GraphicPanel extends JPanel {
 		addMouseListener(mia);
 	}
 	
-	public void clickedMouse(Point p) {		
+	public void draggedMouse(Point p) {
 		int x = (int) (p.getX() / tileSize);
 		int y = (int) (p.getY() / tileSize);
+		int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
+		int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
+		
+		int relevantType;
 		
 		Tile t = map.getTile(x, y, true);
 		if (t == null) {
@@ -261,11 +274,59 @@ public class GraphicPanel extends JPanel {
 		if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight()) {
 			switch (currentState) {
 				case TERRAIN_PENCIL:
-					int tileType = mainWindow.getSelectedTerrainType();
-					undoManager.addAction(new TileChange(t, (byte) tileType, caveLayer, mainWindow.isCaveEntrance(tileType)));
+					relevantType = mainWindow.getSelectedTerrainType();
+					if (t.getTerrainType(caveLayer) != relevantType)
+						currentDragAction.addAction(new TileChange(t, (byte) relevantType, caveLayer, mainWindow.isCaveEntrance(relevantType)));
+					break;
+				case TERRAIN_BRUSH:
+					relevantType = mainWindow.getSelectedTerrainType();
+					currentDragAction.addAction(new BrushTileChange(map, x, y, mainWindow.getBrushSize(), (byte) relevantType, caveLayer));
+					break;
+				default:
+					break;
+			}
+		}
+		
+		repaint();
+	}
+
+	public void clickedMouse(Point p) {		
+		int x = (int) (p.getX() / tileSize);
+		int y = (int) (p.getY() / tileSize);
+		int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
+		int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
+		
+		int relevantType;
+		
+		Tile t = map.getTile(x, y, true);
+		if (t == null) {
+			map.addTile(x, y, new Tile(x, y));
+			t = map.getTile(x, y, true);
+		}
+		
+		if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight()) {
+			switch (currentState) {
+				case TERRAIN_PENCIL:
+					relevantType = mainWindow.getSelectedTerrainType();
+					if (t.getTerrainType(caveLayer) != relevantType)
+						undoManager.addAction(new TileChange(t, (byte) relevantType, caveLayer, mainWindow.isCaveEntrance(relevantType)));
+					break;
+				case TERRAIN_BRUSH:
+					relevantType = mainWindow.getSelectedTerrainType();
+					
+					undoManager.addAction(new BrushTileChange(map, x, y, mainWindow.getBrushSize(), (byte) relevantType, caveLayer));
 					break;
 				case TERRAIN_FILL:
-					
+					relevantType = mainWindow.getSelectedTerrainType();
+					if (t.getTerrainType(caveLayer) != relevantType)
+						undoManager.addAction(new TileFill(map, x, y, (byte) relevantType, caveLayer));
+					break;
+				case TERRAIN_ERASER:
+					relevantType = 0;
+					if (t.getTerrainType(caveLayer) != relevantType)
+						undoManager.addAction(new TileChange(t, (byte) relevantType, caveLayer, false));
+					break;
+				case TERRAIN_PICKER:
 					break;
 				default:
 					;

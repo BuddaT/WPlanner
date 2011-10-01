@@ -2,10 +2,14 @@ package net.buddat.wplanner.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JMenuBar;
@@ -23,6 +27,7 @@ import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 
+import net.buddat.wplanner.gui.GraphicPanel.EditState;
 import net.buddat.wplanner.gui.resources.ResourceManager;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.util.Constants;
@@ -35,8 +40,11 @@ import javax.swing.JToolBar;
 import javax.swing.JRadioButton;
 import javax.swing.JLabel;
 import java.awt.Component;
+import java.util.Enumeration;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 
-public class MainWindow extends JFrame implements ActionListener {
+public class MainWindow extends JFrame implements ActionListener, ChangeListener {
 
 	private static final long serialVersionUID = 6408703853685252009L;
 	
@@ -54,8 +62,10 @@ public class MainWindow extends JFrame implements ActionListener {
 			CMD_FENCE_PENCIL = "fence_pencil", CMD_FENCE_LINE = "fence_line", CMD_FENCE_ERASER = "fence_eraser", CMD_FENCE_PICKER = "fence_picker",
 			CMD_LABEL = "label",
 			CMD_OVERLAY_PENCIL = "overlay_pencil", CMD_OVERLAY_BRUSH = "overlay_brush", CMD_OVERLAY_ERASER = "overlay_eraser", CMD_OVERLAY_PICKER = "overlay_picker", CMD_OVERLAY_COLOR = "overlay_color",
-			CMD_LAYERUP = "layerup", CMD_LAYERDOWN = "layerdown";
-			
+			CMD_LAYERUP = "layerup", CMD_LAYERDOWN = "layerdown",
+			CMD_BRUSHSIZE = "brushsize";
+	
+	private int brushSize = 3;
 	
 	JCheckBoxMenuItem chckbxmntmTerrain;
 	JCheckBoxMenuItem chckbxmntmObjects;
@@ -149,6 +159,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		JMenuItem mntmResizeMap = new JMenuItem("Resize Map...");
 		mntmResizeMap.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK));
 		mntmResizeMap.setActionCommand(CMD_RESIZEMAP);
+		mntmResizeMap.addActionListener(this);
 		mnEdit.add(mntmResizeMap);
 		
 		JMenu mnView = new JMenu("View");
@@ -157,11 +168,13 @@ public class MainWindow extends JFrame implements ActionListener {
 		JMenuItem mntmZoomIn = new JMenuItem("Zoom In");
 		mntmZoomIn.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, InputEvent.CTRL_MASK));
 		mntmZoomIn.setActionCommand(CMD_ZOOMIN);
+		mntmZoomIn.addActionListener(this);
 		mnView.add(mntmZoomIn);
 		
 		JMenuItem mntmZoomOut = new JMenuItem("Zoom Out");
 		mntmZoomOut.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, InputEvent.CTRL_MASK));
 		mntmZoomOut.setActionCommand(CMD_ZOOMOUT);
+		mntmZoomOut.addActionListener(this);
 		mnView.add(mntmZoomOut);
 		
 		JSeparator separator_3 = new JSeparator();
@@ -200,6 +213,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		JMenuItem mntmHelp = new JMenuItem("Help");
 		mntmHelp.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
 		mntmHelp.setActionCommand(CMD_HELP);
+		mntmHelp.addActionListener(this);
 		mnHelp.add(mntmHelp);
 		
 		JSeparator separator_4 = new JSeparator();
@@ -207,6 +221,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		
 		JMenuItem mntmAbout = new JMenuItem("About");
 		mntmAbout.setActionCommand(CMD_ABOUT);
+		mntmAbout.addActionListener(this);
 		mnHelp.add(mntmAbout);
 		
 		contentPane = new JPanel();
@@ -225,29 +240,32 @@ public class MainWindow extends JFrame implements ActionListener {
 		btnNew.setToolTipText("Create a new map");
 		btnNew.setIcon(getResources().getGuiImage(Constants.GUI_NEW));
 		btnNew.setActionCommand(CMD_NEW);
+		btnNew.addActionListener(this);
 		btnNew.setBorder(new EmptyBorder(2, 2, 5, 2));
+		menuTools.add(btnNew);
 		
 		JButton btnOpen = new JButton();
 		btnOpen.setToolTipText("Open an existing map");
 		btnOpen.setIcon(getResources().getGuiImage(Constants.GUI_OPEN));
 		btnOpen.setActionCommand(CMD_OPEN);
+		btnOpen.addActionListener(this);
 		btnOpen.setBorder(new EmptyBorder(2, 2, 5, 2));
+		menuTools.add(btnOpen);
 		
 		JButton btnSave = new JButton();
 		btnSave.setToolTipText("Save the current map");
 		btnSave.setIcon(getResources().getGuiImage(Constants.GUI_SAVE));
 		btnSave.setActionCommand(CMD_SAVE);
+		btnSave.addActionListener(this);
 		btnSave.setBorder(new EmptyBorder(2, 2, 5, 2));
+		menuTools.add(btnSave);
 		
 		JButton btnSaveImage = new JButton();
 		btnSaveImage.setToolTipText("Save the current map as an image");
 		btnSaveImage.setIcon(getResources().getGuiImage(Constants.GUI_SAVE_IMAGE));
 		btnSaveImage.setActionCommand(CMD_SAVEIMG);
+		btnSaveImage.addActionListener(this);
 		btnSaveImage.setBorder(new EmptyBorder(2, 2, 5, 2));
-		
-		menuTools.add(btnNew);
-		menuTools.add(btnOpen);
-		menuTools.add(btnSave);
 		menuTools.add(btnSaveImage);
 		
 		toolGroup = new ButtonGroup();
@@ -257,7 +275,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		panel.add(terrainTools);
 		
 		JLabel lblTerrain = new JLabel("Terrain:");
-		lblTerrain.setBorder(new EmptyBorder(2, 2, 2, 10));
+		lblTerrain.setBorder(new EmptyBorder(2, 2, 2, 5));
 		terrainTools.add(lblTerrain);
 		
 		JRadioButton rdbtnTerrainPencil = new JRadioButton();
@@ -267,6 +285,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnTerrainPencil.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnTerrainPencil.setBorderPainted(true);
 		rdbtnTerrainPencil.setActionCommand(CMD_TERRAIN_PENCIL);
+		rdbtnTerrainPencil.addActionListener(this);
 		terrainTools.add(rdbtnTerrainPencil);
 		toolGroup.add(rdbtnTerrainPencil);
 		
@@ -275,6 +294,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnTerrainBrush.setIcon(getResources().getGuiImage(Constants.GUI_BRUSH));
 		rdbtnTerrainBrush.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnTerrainBrush.setActionCommand(CMD_TERRAIN_BRUSH);
+		rdbtnTerrainBrush.addActionListener(this);
 		terrainTools.add(rdbtnTerrainBrush);
 		toolGroup.add(rdbtnTerrainBrush);
 		
@@ -283,6 +303,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnTerrainFill.setIcon(getResources().getGuiImage(Constants.GUI_FILL));
 		rdbtnTerrainFill.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnTerrainFill.setActionCommand(CMD_TERRAIN_FILL);
+		rdbtnTerrainFill.addActionListener(this);
 		terrainTools.add(rdbtnTerrainFill);
 		toolGroup.add(rdbtnTerrainFill);
 		
@@ -291,6 +312,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnTerrainEraser.setIcon(getResources().getGuiImage(Constants.GUI_ERASER));
 		rdbtnTerrainEraser.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnTerrainEraser.setActionCommand(CMD_TERRAIN_ERASER);
+		rdbtnTerrainEraser.addActionListener(this);
 		terrainTools.add(rdbtnTerrainEraser);
 		toolGroup.add(rdbtnTerrainEraser);
 		
@@ -299,11 +321,12 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnTerrainPicker.setIcon(getResources().getGuiImage(Constants.GUI_PICKER));
 		rdbtnTerrainPicker.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnTerrainPicker.setActionCommand(CMD_TERRAIN_PICKER);
+		rdbtnTerrainPicker.addActionListener(this);
 		terrainTools.add(rdbtnTerrainPicker);
 		toolGroup.add(rdbtnTerrainPicker);
 		
 		JLabel lblObjects = new JLabel("Objects:");
-		lblObjects.setBorder(new EmptyBorder(2, 10, 2, 10));
+		lblObjects.setBorder(new EmptyBorder(2, 10, 2, 5));
 		terrainTools.add(lblObjects);
 		
 		JRadioButton rdbtnObjectsPencil = new JRadioButton();
@@ -311,6 +334,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnObjectsPencil.setIcon(getResources().getGuiImage(Constants.GUI_PENCIL));
 		rdbtnObjectsPencil.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnObjectsPencil.setActionCommand(CMD_OBJECTS_PENCIL);
+		rdbtnObjectsPencil.addActionListener(this);
 		terrainTools.add(rdbtnObjectsPencil);
 		toolGroup.add(rdbtnObjectsPencil);
 		
@@ -319,6 +343,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnObjectsEraser.setIcon(getResources().getGuiImage(Constants.GUI_ERASER));
 		rdbtnObjectsEraser.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnObjectsEraser.setActionCommand(CMD_OBJECTS_ERASER);
+		rdbtnObjectsEraser.addActionListener(this);
 		terrainTools.add(rdbtnObjectsEraser);
 		toolGroup.add(rdbtnObjectsEraser);
 		
@@ -327,11 +352,12 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnObjectsPicker.setIcon(getResources().getGuiImage(Constants.GUI_PICKER));
 		rdbtnObjectsPicker.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnObjectsPicker.setActionCommand(CMD_OBJECTS_PICKER);
+		rdbtnObjectsPicker.addActionListener(this);
 		terrainTools.add(rdbtnObjectsPicker);
 		toolGroup.add(rdbtnObjectsPicker);
 		
 		JLabel lblFences = new JLabel("Fences:");
-		lblFences.setBorder(new EmptyBorder(2, 10, 2, 10));
+		lblFences.setBorder(new EmptyBorder(2, 10, 2, 5));
 		terrainTools.add(lblFences);
 		
 		JRadioButton rdbtnFencePencil = new JRadioButton();
@@ -339,6 +365,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnFencePencil.setIcon(getResources().getGuiImage(Constants.GUI_PENCIL));
 		rdbtnFencePencil.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnFencePencil.setActionCommand(CMD_FENCE_PENCIL);
+		rdbtnFencePencil.addActionListener(this);
 		terrainTools.add(rdbtnFencePencil);
 		toolGroup.add(rdbtnFencePencil);
 
@@ -347,6 +374,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnFenceLine.setIcon(getResources().getGuiImage(Constants.GUI_LINE));
 		rdbtnFenceLine.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnFenceLine.setActionCommand(CMD_FENCE_LINE);
+		rdbtnFenceLine.addActionListener(this);
 		terrainTools.add(rdbtnFenceLine);
 		toolGroup.add(rdbtnFenceLine);
 		
@@ -355,6 +383,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnFenceEraser.setIcon(getResources().getGuiImage(Constants.GUI_ERASER));
 		rdbtnFenceEraser.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnFenceEraser.setActionCommand(CMD_FENCE_ERASER);
+		rdbtnFenceEraser.addActionListener(this);
 		terrainTools.add(rdbtnFenceEraser);
 		toolGroup.add(rdbtnFenceEraser);
 		
@@ -363,11 +392,12 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnFencePicker.setIcon(getResources().getGuiImage(Constants.GUI_PICKER));
 		rdbtnFencePicker.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnFencePicker.setActionCommand(CMD_FENCE_PICKER);
+		rdbtnFencePicker.addActionListener(this);
 		terrainTools.add(rdbtnFencePicker);
 		toolGroup.add(rdbtnFencePicker);
 		
 		JLabel lblMisc = new JLabel("Misc:");
-		lblMisc.setBorder(new EmptyBorder(2, 10, 2, 10));
+		lblMisc.setBorder(new EmptyBorder(2, 10, 2, 5));
 		terrainTools.add(lblMisc);
 		
 		JRadioButton rdbtnLabel = new JRadioButton();
@@ -375,6 +405,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnLabel.setIcon(getResources().getGuiImage(Constants.GUI_LABEL));
 		rdbtnLabel.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnLabel.setActionCommand(CMD_LABEL);
+		rdbtnLabel.addActionListener(this);
 		terrainTools.add(rdbtnLabel);
 		toolGroup.add(rdbtnLabel);
 		
@@ -383,6 +414,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnOverlayPencil.setIcon(getResources().getGuiImage(Constants.GUI_PENCIL));
 		rdbtnOverlayPencil.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnOverlayPencil.setActionCommand(CMD_OVERLAY_PENCIL);
+		rdbtnOverlayPencil.addActionListener(this);
 		terrainTools.add(rdbtnOverlayPencil);
 		toolGroup.add(rdbtnOverlayPencil);
 		
@@ -391,6 +423,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnOverlayBrush.setIcon(getResources().getGuiImage(Constants.GUI_BRUSH));
 		rdbtnOverlayBrush.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnOverlayBrush.setActionCommand(CMD_OVERLAY_BRUSH);
+		rdbtnOverlayBrush.addActionListener(this);
 		terrainTools.add(rdbtnOverlayBrush);
 		toolGroup.add(rdbtnOverlayBrush);
 		
@@ -399,6 +432,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnOverlayEraser.setIcon(getResources().getGuiImage(Constants.GUI_ERASER));
 		rdbtnOverlayEraser.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnOverlayEraser.setActionCommand(CMD_OVERLAY_ERASER);
+		rdbtnOverlayEraser.addActionListener(this);
 		terrainTools.add(rdbtnOverlayEraser);
 		toolGroup.add(rdbtnOverlayEraser);
 		
@@ -407,6 +441,7 @@ public class MainWindow extends JFrame implements ActionListener {
 		rdbtnOverlayPicker.setIcon(getResources().getGuiImage(Constants.GUI_PICKER));
 		rdbtnOverlayPicker.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLUE));
 		rdbtnOverlayPicker.setActionCommand(CMD_OVERLAY_PICKER);
+		rdbtnOverlayPicker.addActionListener(this);
 		terrainTools.add(rdbtnOverlayPicker);
 		toolGroup.add(rdbtnOverlayPicker);
 		
@@ -415,38 +450,19 @@ public class MainWindow extends JFrame implements ActionListener {
 		btnOverlayColor.setIcon(getResources().getGuiImage(Constants.GUI_COLOR_CHOOSER));
 		btnOverlayColor.setBorder(new EmptyBorder(2, 2, 5, 2));
 		btnOverlayColor.setActionCommand(CMD_OVERLAY_COLOR);
+		btnOverlayColor.addActionListener(this);
 		terrainTools.add(btnOverlayColor);
 		
-		JToolBar viewTools = new JToolBar();
-		panel.add(viewTools);
+		JLabel lblBrushSize = new JLabel("Brush:");
+		lblBrushSize.setBorder(new EmptyBorder(2, 10, 2, 5));
+		panel.add(lblBrushSize);
 		
-		JButton btnZoomIn = new JButton();
-		btnZoomIn.setToolTipText("Zoom In");
-		btnZoomIn.setIcon(getResources().getGuiImage(Constants.GUI_ZOOM_IN));
-		btnZoomIn.setBorder(new EmptyBorder(2, 2, 5, 2));
-		btnZoomIn.setActionCommand(CMD_ZOOMIN);
-		viewTools.add(btnZoomIn);
-		
-		JButton btnZoomOut = new JButton();
-		btnZoomOut.setToolTipText("Zoom Out");
-		btnZoomOut.setIcon(getResources().getGuiImage(Constants.GUI_ZOOM_OUT));
-		btnZoomOut.setBorder(new EmptyBorder(2, 2, 5, 2));
-		btnZoomOut.setActionCommand(CMD_ZOOMOUT);
-		viewTools.add(btnZoomOut);
-		
-		JButton btnLayerUp = new JButton();
-		btnLayerUp.setToolTipText("Layer Up");
-		btnLayerUp.setIcon(getResources().getGuiImage(Constants.GUI_LAYER_UP));
-		btnLayerUp.setBorder(new EmptyBorder(2, 2, 5, 2));
-		btnLayerUp.setActionCommand(CMD_LAYERUP);
-		viewTools.add(btnLayerUp);
-		
-		JButton btnLayerDown = new JButton();
-		btnLayerDown.setToolTipText("Layer Down");
-		btnLayerDown.setIcon(getResources().getGuiImage(Constants.GUI_LAYER_DOWN));
-		btnLayerDown.setBorder(new EmptyBorder(2, 2, 5, 2));
-		btnLayerDown.setActionCommand(CMD_LAYERDOWN);
-		viewTools.add(btnLayerDown);
+		JSpinner spinner = new JSpinner();
+		spinner.setModel(new SpinnerNumberModel(3, 3, 21, 2));
+		spinner.setMaximumSize(new Dimension(40, 25));
+		spinner.setName(CMD_BRUSHSIZE);
+		spinner.addChangeListener(this);
+		panel.add(spinner);
 		
 		JSplitPane splitPane = new JSplitPane();
 		contentPane.add(splitPane, BorderLayout.CENTER);
@@ -456,6 +472,42 @@ public class MainWindow extends JFrame implements ActionListener {
 		
 		tabEditor = new JTabbedPane(JTabbedPane.TOP);
 		splitPane.setRightComponent(tabEditor);
+		
+		JToolBar viewTools = new JToolBar();
+		viewTools.setOrientation(SwingConstants.VERTICAL);
+		contentPane.add(viewTools, BorderLayout.EAST);
+		
+		JButton btnZoomIn = new JButton();
+		btnZoomIn.setToolTipText("Zoom In");
+		btnZoomIn.setIcon(getResources().getGuiImage(Constants.GUI_ZOOM_IN));
+		btnZoomIn.setBorder(new EmptyBorder(2, 2, 5, 2));
+		btnZoomIn.setActionCommand(CMD_ZOOMIN);
+		btnZoomIn.addActionListener(this);
+		viewTools.add(btnZoomIn);
+		
+		JButton btnZoomOut = new JButton();
+		btnZoomOut.setToolTipText("Zoom Out");
+		btnZoomOut.setIcon(getResources().getGuiImage(Constants.GUI_ZOOM_OUT));
+		btnZoomOut.setBorder(new EmptyBorder(2, 2, 5, 2));
+		btnZoomOut.setActionCommand(CMD_ZOOMOUT);
+		btnZoomOut.addActionListener(this);
+		viewTools.add(btnZoomOut);
+		
+		JButton btnLayerUp = new JButton();
+		btnLayerUp.setToolTipText("Layer Up");
+		btnLayerUp.setIcon(getResources().getGuiImage(Constants.GUI_LAYER_UP));
+		btnLayerUp.setBorder(new EmptyBorder(2, 2, 5, 2));
+		btnLayerUp.setActionCommand(CMD_LAYERUP);
+		btnLayerUp.addActionListener(this);
+		viewTools.add(btnLayerUp);
+		
+		JButton btnLayerDown = new JButton();
+		btnLayerDown.setToolTipText("Layer Down");
+		btnLayerDown.setIcon(getResources().getGuiImage(Constants.GUI_LAYER_DOWN));
+		btnLayerDown.setBorder(new EmptyBorder(2, 2, 5, 2));
+		btnLayerDown.setActionCommand(CMD_LAYERDOWN);
+		btnLayerDown.addActionListener(this);
+		viewTools.add(btnLayerDown);
 
 		setVisible(true);
 	}
@@ -494,19 +546,117 @@ public class MainWindow extends JFrame implements ActionListener {
 		
 		return false;
 	}
+	
+	public void setBrushSize(int newSize) {
+		brushSize = newSize;
+	}
+	
+	public int getBrushSize() {
+		return brushSize;
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		String actionCmd = e.getActionCommand();
-		GraphicPanel panel = (GraphicPanel) ((JScrollPane) tabEditor.getSelectedComponent()).getViewport().getComponent(0);
+		GraphicPanel selectedPanel = (GraphicPanel) ((JScrollPane) tabEditor.getSelectedComponent()).getViewport().getComponent(0);
 		
 		Logger.log(actionCmd);
 		
-		if (actionCmd.equals(CMD_UNDO)) {
-			panel.undo();
+		if (actionCmd.equals(CMD_NEW)) {
+			
+		} else if (actionCmd.equals(CMD_OPEN)) {
+			
+		} else if (actionCmd.equals(CMD_SAVE)) {
+			
+		} else if (actionCmd.equals(CMD_SAVEAS)) {
+			
+		} else if (actionCmd.equals(CMD_SAVEIMG)) {
+			
+		} else if (actionCmd.equals(CMD_SAVEIMGAS)) {
+			
+		} else if (actionCmd.equals(CMD_EXIT)) {
+
+		} else if (actionCmd.equals(CMD_UNDO)) {
+			selectedPanel.undo();
 		} else if (actionCmd.equals(CMD_REDO)) {
-			panel.redo();
+			selectedPanel.redo();
+		} else if (actionCmd.equals(CMD_RESIZEMAP)) {
+		} else if (actionCmd.equals(CMD_ZOOMIN)) {
+		} else if (actionCmd.equals(CMD_ZOOMOUT)) {
+		} else if (actionCmd.equals(CMD_HELP)) {
+		} else if (actionCmd.equals(CMD_ABOUT)) {
+		} else if (actionCmd.equals(CMD_TERRAIN_PENCIL)) {
+			selectedPanel.setEditState(EditState.TERRAIN_PENCIL);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_TERRAIN_BRUSH)) {
+			selectedPanel.setEditState(EditState.TERRAIN_BRUSH);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_TERRAIN_FILL)) {
+			selectedPanel.setEditState(EditState.TERRAIN_FILL);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_TERRAIN_ERASER)) {
+			selectedPanel.setEditState(EditState.TERRAIN_ERASER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_TERRAIN_PICKER)) {
+			selectedPanel.setEditState(EditState.TERRAIN_PICKER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OBJECTS_PENCIL)) {
+			selectedPanel.setEditState(EditState.OBJECT_PENCIL);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OBJECTS_ERASER)) {
+			selectedPanel.setEditState(EditState.OBJECT_ERASER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OBJECTS_PICKER)) {
+			selectedPanel.setEditState(EditState.OBJECT_PICKER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_FENCE_PENCIL)) {
+			selectedPanel.setEditState(EditState.FENCE_PENCIL);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_FENCE_LINE)) {
+			selectedPanel.setEditState(EditState.FENCE_LINE);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_FENCE_ERASER)) {
+			selectedPanel.setEditState(EditState.FENCE_ERASER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_FENCE_PICKER)) {
+			selectedPanel.setEditState(EditState.FENCE_PICKER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_LABEL)) {
+			selectedPanel.setEditState(EditState.LABEL);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OVERLAY_PENCIL)) {
+			selectedPanel.setEditState(EditState.OVERLAY_PENCIL);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OVERLAY_BRUSH)) {
+			selectedPanel.setEditState(EditState.OVERLAY_BRUSH);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OVERLAY_ERASER)) {
+			selectedPanel.setEditState(EditState.OVERLAY_ERASER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OVERLAY_PICKER)) {
+			selectedPanel.setEditState(EditState.OVERLAY_PICKER);
+			updateSelectedTool(e);
+		} else if (actionCmd.equals(CMD_OVERLAY_COLOR)) {
+		} else if (actionCmd.equals(CMD_LAYERUP)) {
+		} else if (actionCmd.equals(CMD_LAYERDOWN)) {
 		}
+	}
+	
+	@Override
+	public void stateChanged(ChangeEvent e) {
+		String componentName = ((Component) e.getSource()).getName();
+		
+		if (componentName.equals(CMD_BRUSHSIZE)) {
+			setBrushSize((Integer) ((JSpinner) e.getSource()).getValue());
+		}
+	}
+	
+	private void updateSelectedTool(ActionEvent e) {
+		Enumeration<AbstractButton> buttons = toolGroup.getElements();
+		while (buttons.hasMoreElements())
+			((JRadioButton) buttons.nextElement()).setBorderPainted(false);
+		
+		((JRadioButton) e.getSource()).setBorderPainted(true);
 	}
 	
 }
