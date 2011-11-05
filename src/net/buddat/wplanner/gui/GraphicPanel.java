@@ -1,25 +1,37 @@
 package net.buddat.wplanner.gui;
 
+import java.awt.Color;
 import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
 import javax.swing.JViewport;
 import javax.swing.event.MouseInputAdapter;
 
+import net.buddat.wplanner.gui.action.BrushOverlayChange;
 import net.buddat.wplanner.gui.action.BrushTileChange;
 import net.buddat.wplanner.gui.action.DraggedAction;
+import net.buddat.wplanner.gui.action.FenceChange;
+import net.buddat.wplanner.gui.action.FenceLine;
+import net.buddat.wplanner.gui.action.LabelChange;
+import net.buddat.wplanner.gui.action.ObjectChange;
 import net.buddat.wplanner.gui.action.ObjectRotationChange;
+import net.buddat.wplanner.gui.action.OverlayChange;
 import net.buddat.wplanner.gui.action.TileChange;
 import net.buddat.wplanner.gui.action.TileFill;
+import net.buddat.wplanner.gui.resources.ResourceManager.ImageType;
 import net.buddat.wplanner.gui.undo.UndoManager;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.map.Tile;
+import net.buddat.wplanner.util.Logger;
 
 public class GraphicPanel extends JPanel {
 
@@ -38,6 +50,10 @@ public class GraphicPanel extends JPanel {
 	private UndoManager undoManager;
 	
 	private DraggedAction currentDragAction;
+	private FenceLine fenceLineChange;
+	
+	private int mouseX, mouseY;
+	private Color highlightColor = new Color(Color.YELLOW.getRed(), Color.YELLOW.getGreen(), Color.YELLOW.getBlue(), 100);
 	
 	public static final int TILE_MAX_SIZE = 128, TILE_MIN_SIZE = 4, TILE_SIZE_STEP = 4;
 	private int tileSize = 48;
@@ -78,13 +94,17 @@ public class GraphicPanel extends JPanel {
 		
 		int xEnd = (int) (jvp.getX() + jv.getWidth());
 		xEnd /= tileSize;
-		if (xEnd + 1 <= map.getMapWidth())
+		if (xEnd + 1 < map.getMapWidth())
 			xEnd += 1;
+		else
+			xEnd = map.getMapWidth();
 		
 		int yEnd = (int) (jvp.getY() + jv.getHeight());
 		yEnd /= tileSize;
-		if (yEnd + 1 <= map.getMapHeight())
+		if (yEnd + 1 < map.getMapHeight())
 			yEnd += 1;
+		else
+			yEnd = map.getMapHeight();
 		
 		if (saveToImage) {
 			xStart = 0;
@@ -92,6 +112,9 @@ public class GraphicPanel extends JPanel {
 			xEnd = map.getMapWidth();
 			yEnd = map.getMapHeight();
 		}
+		
+		int halfTileSize = tileSize / 2;
+		FontMetrics fm = g.getFontMetrics();
 		
 		/*
 		 * Terrain and grid.
@@ -143,6 +166,132 @@ public class GraphicPanel extends JPanel {
 							}
 				}
 		
+		/*
+		 * Overlay
+		 */
+		for (int i = xStart; i < xEnd; i++)
+			for (int j = yStart; j < yEnd; j++)
+				if (mainWindow.chckbxmntmOverlay.isSelected()) {
+					Tile t = map.getTile(i, j, false);
+					if (t != null) {
+						Color currentColor = t.getOverlayColor(caveLayer);
+						
+						if (currentColor != null) {
+							g.setColor(currentColor);
+							g.fillRect(i * tileSize, j * tileSize, tileSize, tileSize);
+						}
+					}
+				}
+		
+		/*
+		 * Fences
+		 */
+		for (int i = xStart; i < xEnd; i++)
+			for (int j = yStart; j < yEnd; j++) 
+				if (mainWindow.chckbxmntmFences.isSelected()) {
+					Tile t = map.getTile(i, j, false);
+					
+					if (t != null) {
+						for (int i1 = 0; i1 < 2; i1++) {
+							if (t.getFenceType(caveLayer, i1) > 1) {
+								Image fenceImg = mainWindow.getResources().getFenceImage(t.getFenceType(caveLayer, i1));
+								
+								g.drawImage(fenceImg, (i * tileSize) + (i1 == Tile.LEFT_FENCE ? -halfTileSize : 0), 
+										(j * tileSize) + (i1 == Tile.TOP_FENCE ? -halfTileSize : 0),
+										tileSize, tileSize, null);
+							}
+						}
+					}
+				}
+		
+		/*
+		 * Labels
+		 */
+		for (int i = xStart; i < xEnd; i++)
+			for (int j = yStart; j < yEnd; j++)
+				if (mainWindow.chckbxmntmLabels.isSelected()) {
+					Tile t = map.getTile(i, j, false);
+					if (t != null) {
+						Color currentColor = t.getLabelColor(caveLayer);
+						
+						if (currentColor != null && t.getLabel(caveLayer) != null) {
+							Rectangle2D rect = fm.getStringBounds(t.getLabel(caveLayer), g);
+							int textHeight = (int)(rect.getHeight()); 
+							int textWidth  = (int)(rect.getWidth());
+							
+							g.setColor(currentColor);
+							g.drawString(t.getLabel(caveLayer), (i * tileSize) + halfTileSize - (textWidth / 2), (j * tileSize) + halfTileSize + (textHeight / 3));
+						}
+					}
+				}
+		
+		/*
+		 * Highlights
+		 */
+		if (!saveToImage) {
+			int tileX = mouseX / tileSize;
+			int tileY = mouseY / tileSize;
+			
+			if (tileX >= 0 && tileX < map.getMapWidth() && tileY >= 0 && tileY < map.getMapHeight()) {
+				int lblY = (int) jvp.getY();
+				int lblEndX = (int) (jvp.getX() + jv.getWidth());
+				
+				String label = "x:" + (tileX + 1) + " y:" + (tileY + 1);
+				
+				Rectangle2D rect = fm.getStringBounds(label, g);
+				int textHeight = (int)(rect.getHeight()); 
+				int textWidth  = (int)(rect.getWidth());
+				
+				g.setColor(highlightColor);
+				switch(currentState) {
+					case OBJECT_PENCIL:
+					case OBJECT_ERASER:
+					case OBJECT_PICKER:
+						int objX = (mouseX - (tileX * tileSize)) / objectArea;
+						int objY = (mouseY - (tileY * tileSize)) / objectArea;
+						
+						g.fillRect((tileX * tileSize) + (objX * objectArea), (tileY * tileSize) + (objY * objectArea), objectArea, objectArea);
+						break;
+					case FENCE_PENCIL:
+					case FENCE_LINE:
+					case FENCE_ERASER:
+					case FENCE_PICKER:
+						int locX = (int) ((mouseX - (tileX * tileSize)) / (tileSize / 4));
+						int locY = (int) ((mouseY - (tileY * tileSize)) / (tileSize / 4));
+						
+						if (locX == 0 && (locY == 1 || locY == 2))
+							g.fillRect((tileX * tileSize) - 3, tileY * tileSize, 6, tileSize);
+						else if (locX == 3 && (locY == 1 || locY == 2))
+							g.fillRect(((tileX + 1) * tileSize) - 3, tileY * tileSize, 6, tileSize);
+						else if (locY == 0 && (locX == 1 || locX == 2))
+							g.fillRect(tileX * tileSize, (tileY * tileSize) - 3, tileSize, 6);
+						else if (locY == 3 && (locX == 1 || locX == 2))
+							g.fillRect(tileX * tileSize, ((tileY + 1) * tileSize) - 3, tileSize, 6);
+						
+						break;
+					case OVERLAY_BRUSH:
+						g.setColor(mainWindow.getOverlayColor());
+					case TERRAIN_BRUSH:	
+						int distance = (mainWindow.getBrushSize() - 1) / 2;
+						
+						g.fillRect((tileX - distance) * tileSize, (tileY - distance) * tileSize, mainWindow.getBrushSize() * tileSize, mainWindow.getBrushSize() * tileSize);
+						break;
+					case OVERLAY_PENCIL:
+					case OVERLAY_ERASER:
+						g.setColor(mainWindow.getOverlayColor());
+					default:
+						g.fillRect(tileX * tileSize, tileY * tileSize, tileSize, tileSize);
+						break;
+				}
+				
+				g.setColor(Color.WHITE);
+				g.fillRect(lblEndX - textWidth - 10, lblY, textWidth + 10, textHeight + 5);
+				g.setColor(Color.BLACK);
+				g.drawString(label, lblEndX - textWidth - 5, lblY + textHeight);
+			}
+		}
+		
+		saveToImage = false;
 	}
 
 	public boolean isCaveLayer() {
@@ -151,6 +300,7 @@ public class GraphicPanel extends JPanel {
 
 	public void setCaveLayer(boolean caveLayer) {
 		this.caveLayer = caveLayer;
+		repaint();
 	}
 	
 	public EditState getEditState() {
@@ -165,7 +315,6 @@ public class GraphicPanel extends JPanel {
 		return undoManager;
 	}
 	
-
 	public void undo() {
 		getUndoManager().undo();
 		repaint();
@@ -174,6 +323,88 @@ public class GraphicPanel extends JPanel {
 	public void redo() {
 		getUndoManager().redo();
 		repaint();
+	}
+	
+	public void zoomIn() {
+		if (tileSize + TILE_SIZE_STEP > TILE_MAX_SIZE)
+			return;
+		
+		int oldSize = tileSize;
+		Container c = GraphicPanel.this.getParent();
+		int newX, newY;
+		
+		tileSize += TILE_SIZE_STEP;
+		
+		revalidateScroll();
+		
+		if (c instanceof JViewport) {
+			JViewport jv = (JViewport) c;
+			Point pos = jv.getViewPosition();
+			
+			newX = pos.x + ((pos.x / oldSize) * (TILE_SIZE_STEP + 1));
+			newY = pos.y + ((pos.y / oldSize) * (TILE_SIZE_STEP + 1));
+			
+			jv.setViewPosition(new Point(newX, newY));
+		}
+		
+		repaint();
+	}
+	
+	public void zoomOut() {
+		if (tileSize - TILE_SIZE_STEP < TILE_MIN_SIZE)
+			return;
+		
+		int oldSize = tileSize;
+		Container c = GraphicPanel.this.getParent();
+		int newX, newY;
+		
+		tileSize -= TILE_SIZE_STEP;
+		
+		revalidateScroll();
+		
+		if (c instanceof JViewport) {
+			JViewport jv = (JViewport) c;
+			Point pos = jv.getViewPosition();
+			
+			newX = pos.x - ((pos.x / oldSize) * (TILE_SIZE_STEP + 1));
+			newY = pos.y - ((pos.y / oldSize) * (TILE_SIZE_STEP + 1));
+			
+			jv.setViewPosition(new Point(newX, newY));
+		}
+		
+		repaint();
+	}
+
+	public void resizeMap() {
+		ResizeDialog rd = new ResizeDialog(map.getMapName(), map.getMapWidth(), map.getMapHeight());
+		int[] newSize = rd.getAdjustments();
+		rd.dispose();
+		
+		if (newSize == null)
+			return;
+		
+		int northAdj = newSize[0];
+		int eastAdj = newSize[1];
+		int southAdj = newSize[2];
+		int westAdj = newSize[3];
+		
+		int newWidth = map.getMapWidth() + eastAdj + westAdj;
+		int newHeight = map.getMapHeight() + northAdj + southAdj;
+		
+		map.resizeMap(newWidth, newHeight, westAdj, northAdj);
+		
+		revalidateScroll();
+		repaint();
+	}
+
+	public BufferedImage getMapImage() {
+		BufferedImage mapImg = new BufferedImage(map.getMapWidth() * tileSize, map.getMapHeight() * tileSize, BufferedImage.TYPE_INT_ARGB);
+		Graphics g = mapImg.getGraphics();
+		saveToImage = true;
+		
+		paint(g);
+		
+		return mapImg;
 	}
 	
 	public void revalidateScroll() {
@@ -217,9 +448,9 @@ public class GraphicPanel extends JPanel {
 			}
 			
 			public void mouseMoved(MouseEvent e) {
-				/*mouseX = e.getX();
+				mouseX = e.getX();
 				mouseY = e.getY();
-				repaint();*/
+				repaint();
 			}
 
 			public void mousePressed(MouseEvent e) {
@@ -242,6 +473,11 @@ public class GraphicPanel extends JPanel {
 					m1_dragging = false;
 					if (!currentDragAction.isEmpty())
 						undoManager.addAction(currentDragAction);
+					if (fenceLineChange != null) {
+						undoManager.addAction(fenceLineChange);
+						fenceLineChange = null;
+					}
+						
 				}
 			}   
 			
@@ -260,10 +496,29 @@ public class GraphicPanel extends JPanel {
 	public void draggedMouse(Point p) {
 		int x = (int) (p.getX() / tileSize);
 		int y = (int) (p.getY() / tileSize);
-		int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
-		int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
+		
+		int objLocX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
+		int objLocY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
+		int objLoc = (objLocY * 3) + objLocX;
+		
+		int fenceLocX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 4));
+		int fenceLocY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 4));
+		Tile rightTile = map.getTile(x + 1, y, false);
+		Tile downTile = map.getTile(x, y + 1, false);
+		
+		if (downTile == null)
+			if (y + 1 < map.getMapHeight()) {
+				downTile = new Tile(x, y + 1);
+				map.addTile(x, y + 1, downTile);
+			}
+		if (rightTile == null) 
+			if (x + 1 < map.getMapWidth()) {
+				rightTile = new Tile(x + 1, y);
+				map.addTile(x + 1, y, rightTile);
+			}
 		
 		int relevantType;
+		Color c = mainWindow.getOverlayColor();
 		
 		Tile t = map.getTile(x, y, true);
 		if (t == null) {
@@ -274,13 +529,142 @@ public class GraphicPanel extends JPanel {
 		if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight()) {
 			switch (currentState) {
 				case TERRAIN_PENCIL:
-					relevantType = mainWindow.getSelectedTerrainType();
+					relevantType = mainWindow.getSelectedTerrain();
 					if (t.getTerrainType(caveLayer) != relevantType)
 						currentDragAction.addAction(new TileChange(t, (byte) relevantType, caveLayer, mainWindow.isCaveEntrance(relevantType)));
 					break;
 				case TERRAIN_BRUSH:
-					relevantType = mainWindow.getSelectedTerrainType();
+					relevantType = mainWindow.getSelectedTerrain();
 					currentDragAction.addAction(new BrushTileChange(map, x, y, mainWindow.getBrushSize(), (byte) relevantType, caveLayer));
+					break;
+				case TERRAIN_FILL:
+					relevantType = mainWindow.getSelectedTerrain();
+					if (currentDragAction.isEmpty())
+						if (t.getTerrainType(caveLayer) != relevantType)
+							currentDragAction.addAction(new TileFill(map, x, y, (byte) relevantType, caveLayer));
+					break;
+				case TERRAIN_ERASER:
+					relevantType = 0;
+					currentDragAction.addAction(new TileChange(t, (byte) relevantType, caveLayer, false));
+					break;
+				case TERRAIN_PICKER:
+					if (mainWindow.getSelectedTerrain() != t.getTerrainType(caveLayer))
+						mainWindow.forceSelection(ImageType.TERRAIN, t.getTerrainType(caveLayer));
+					break;
+				case OBJECT_PENCIL:
+					relevantType = mainWindow.getSelectedObject();
+					if (t.getObjectType(caveLayer, objLoc) != relevantType)
+						currentDragAction.addAction(new ObjectChange(t, (byte) relevantType, objLoc, caveLayer));
+					break;
+				case OBJECT_ERASER:
+					relevantType = 0;
+					currentDragAction.addAction(new ObjectChange(t, (byte) relevantType, objLoc, caveLayer));
+					break;
+				case OBJECT_PICKER:
+					if (mainWindow.getSelectedObject() != t.getObjectType(caveLayer, objLoc))
+						mainWindow.forceSelection(ImageType.OBJECT, t.getObjectType(caveLayer, objLoc));
+					break;
+				case FENCE_PENCIL:
+				case FENCE_ERASER:
+					relevantType = (currentState == EditState.FENCE_ERASER ? 0 : mainWindow.getSelectedFence());
+
+					switch (fenceLocX) {
+						case 0:
+							if (fenceLocY == 1 || fenceLocY == 2)
+								if (t.getFenceType(caveLayer, Tile.LEFT_FENCE) != relevantType + 1)
+									currentDragAction.addAction(new FenceChange(t, (byte) (relevantType + 1), Tile.LEFT_FENCE, caveLayer));
+							break;
+						case 1:
+						case 2:
+							if (fenceLocY == 0) {
+								if (t.getFenceType(caveLayer, Tile.TOP_FENCE) != relevantType)
+									currentDragAction.addAction(new FenceChange(t, (byte) relevantType, Tile.TOP_FENCE, caveLayer));
+							} else if (fenceLocY == 3) {
+								if (downTile != null)
+									if (downTile.getFenceType(caveLayer, Tile.TOP_FENCE) != relevantType)
+										currentDragAction.addAction(new FenceChange(downTile, (byte) relevantType, Tile.TOP_FENCE, caveLayer));
+							}
+							break;
+						case 3:
+							if (fenceLocY == 1 || fenceLocY == 2) {								
+								if (rightTile != null)
+									if (rightTile.getFenceType(caveLayer, Tile.LEFT_FENCE) != relevantType + 1)
+										currentDragAction.addAction(new FenceChange(rightTile, (byte) (relevantType + 1), Tile.LEFT_FENCE, caveLayer));
+							}
+							break;
+					}
+					break;
+				case FENCE_LINE:
+					relevantType = mainWindow.getSelectedFence();
+					
+					if (fenceLineChange == null) {
+						switch (fenceLocX) {
+							case 0:
+								if (fenceLocY == 1 || fenceLocY == 2)
+									fenceLineChange = new FenceLine(map, x, y, (byte) relevantType, Tile.LEFT_FENCE, caveLayer);
+								break;
+							case 1:
+							case 2:
+								if (fenceLocY == 0) {
+									fenceLineChange = new FenceLine(map, x, y, (byte) relevantType, Tile.TOP_FENCE, caveLayer);
+								} else if (fenceLocY == 3) {
+									fenceLineChange = new FenceLine(map, x, y + 1, (byte) relevantType, Tile.TOP_FENCE, caveLayer);
+								}
+								break;
+							case 3:
+								if (fenceLocY == 1 || fenceLocY == 2) {								
+									fenceLineChange = new FenceLine(map, x + 1, y, (byte) relevantType, Tile.LEFT_FENCE, caveLayer);
+								}
+								break;
+						}
+					}
+					
+					if (fenceLineChange != null)
+						fenceLineChange.update(x, y);
+					break;
+				case FENCE_PICKER:
+					relevantType = mainWindow.getSelectedFence();
+					
+					switch (fenceLocX) {
+						case 0:
+							if (fenceLocY == 1 || fenceLocY == 2)
+								relevantType = t.getFenceType(caveLayer, Tile.LEFT_FENCE) - 1;
+							break;
+						case 1:
+						case 2:
+							if (fenceLocY == 0) {
+								relevantType = t.getFenceType(caveLayer, Tile.TOP_FENCE);
+							} else if (fenceLocY == 3) {
+								relevantType = downTile.getFenceType(caveLayer, Tile.TOP_FENCE);
+							}
+							break;
+						case 3:
+							if (fenceLocY == 1 || fenceLocY == 2) {								
+								relevantType = rightTile.getFenceType(caveLayer, Tile.LEFT_FENCE) - 1;
+							}
+							break;
+					}
+					
+					if (relevantType < 0)
+						relevantType = 0;
+					
+					if (mainWindow.getSelectedFence() != relevantType)
+						mainWindow.forceSelection(ImageType.FENCE, relevantType);
+					break;
+				case OVERLAY_PENCIL:
+					if (t.getOverlayColor(caveLayer) != c)
+						currentDragAction.addAction(new OverlayChange(t, c, caveLayer));
+					break;
+				case OVERLAY_BRUSH:
+					currentDragAction.addAction(new BrushOverlayChange(map, x, y, mainWindow.getBrushSize(), c, caveLayer));
+					break;
+				case OVERLAY_ERASER:
+					c = null;
+					if (t.getOverlayColor(caveLayer) != c)
+						currentDragAction.addAction(new OverlayChange(t, c, caveLayer));
+					break;
+				case OVERLAY_PICKER:
+					mainWindow.setOverlayColor(t.getOverlayColor(caveLayer));
 					break;
 				default:
 					break;
@@ -293,10 +677,29 @@ public class GraphicPanel extends JPanel {
 	public void clickedMouse(Point p) {		
 		int x = (int) (p.getX() / tileSize);
 		int y = (int) (p.getY() / tileSize);
-		int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
-		int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
+		
+		int objLocX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
+		int objLocY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
+		int objLoc = (objLocY * 3) + objLocX;
+		
+		int fenceLocX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 4));
+		int fenceLocY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 4));
+		Tile rightTile = map.getTile(x + 1, y, false);
+		Tile downTile = map.getTile(x, y + 1, false);
+		
+		if (downTile == null)
+			if (y + 1 < map.getMapHeight()) {
+				downTile = new Tile(x, y + 1);
+				map.addTile(x, y + 1, downTile);
+			}
+		if (rightTile == null) 
+			if (x + 1 < map.getMapWidth()) {
+				rightTile = new Tile(x + 1, y);
+				map.addTile(x + 1, y, rightTile);
+			}
 		
 		int relevantType;
+		Color c = mainWindow.getOverlayColor();
 		
 		Tile t = map.getTile(x, y, true);
 		if (t == null) {
@@ -307,17 +710,17 @@ public class GraphicPanel extends JPanel {
 		if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight()) {
 			switch (currentState) {
 				case TERRAIN_PENCIL:
-					relevantType = mainWindow.getSelectedTerrainType();
+					relevantType = mainWindow.getSelectedTerrain();
 					if (t.getTerrainType(caveLayer) != relevantType)
 						undoManager.addAction(new TileChange(t, (byte) relevantType, caveLayer, mainWindow.isCaveEntrance(relevantType)));
 					break;
 				case TERRAIN_BRUSH:
-					relevantType = mainWindow.getSelectedTerrainType();
+					relevantType = mainWindow.getSelectedTerrain();
 					
 					undoManager.addAction(new BrushTileChange(map, x, y, mainWindow.getBrushSize(), (byte) relevantType, caveLayer));
 					break;
 				case TERRAIN_FILL:
-					relevantType = mainWindow.getSelectedTerrainType();
+					relevantType = mainWindow.getSelectedTerrain();
 					if (t.getTerrainType(caveLayer) != relevantType)
 						undoManager.addAction(new TileFill(map, x, y, (byte) relevantType, caveLayer));
 					break;
@@ -327,171 +730,104 @@ public class GraphicPanel extends JPanel {
 						undoManager.addAction(new TileChange(t, (byte) relevantType, caveLayer, false));
 					break;
 				case TERRAIN_PICKER:
+					if (mainWindow.getSelectedTerrain() != t.getTerrainType(caveLayer));
+						mainWindow.forceSelection(ImageType.TERRAIN, t.getTerrainType(caveLayer));
+					break;
+				case OBJECT_PENCIL:
+					relevantType = mainWindow.getSelectedObject();
+					if (t.getObjectType(caveLayer, objLoc) != relevantType)
+						undoManager.addAction(new ObjectChange(t, (byte) relevantType, objLoc, caveLayer));
+					break;
+				case OBJECT_ERASER:
+					relevantType = 0;
+					undoManager.addAction(new ObjectChange(t, (byte) relevantType, objLoc, caveLayer));
+					break;
+				case OBJECT_PICKER:
+					if (mainWindow.getSelectedObject() != t.getObjectType(caveLayer, objLoc))
+						mainWindow.forceSelection(ImageType.OBJECT, t.getObjectType(caveLayer, objLoc));
+					break;
+				case FENCE_PENCIL:
+				case FENCE_LINE:
+				case FENCE_ERASER:
+					relevantType = (currentState == EditState.FENCE_ERASER ? 0 : mainWindow.getSelectedFence());
+
+					switch (fenceLocX) {
+						case 0:
+							if (fenceLocY == 1 || fenceLocY == 2)
+								if (t.getFenceType(caveLayer, Tile.LEFT_FENCE) != relevantType + 1)
+									undoManager.addAction(new FenceChange(t, (byte) (relevantType + 1), Tile.LEFT_FENCE, caveLayer));
+							break;
+						case 1:
+						case 2:
+							if (fenceLocY == 0) {
+								if (t.getFenceType(caveLayer, Tile.TOP_FENCE) != relevantType)
+									undoManager.addAction(new FenceChange(t, (byte) relevantType, Tile.TOP_FENCE, caveLayer));
+							} else if (fenceLocY == 3) {
+								if (downTile != null)
+									if (downTile.getFenceType(caveLayer, Tile.TOP_FENCE) != relevantType)
+										undoManager.addAction(new FenceChange(downTile, (byte) relevantType, Tile.TOP_FENCE, caveLayer));
+							}
+							break;
+						case 3:
+							if (fenceLocY == 1 || fenceLocY == 2) {								
+								if (rightTile != null)
+									if (rightTile.getFenceType(caveLayer, Tile.LEFT_FENCE) != relevantType + 1)
+										undoManager.addAction(new FenceChange(rightTile, (byte) (relevantType + 1), Tile.LEFT_FENCE, caveLayer));
+							}
+							break;
+					}
+					break;
+				case FENCE_PICKER:	
+					relevantType = mainWindow.getSelectedFence();
+					
+					switch (fenceLocX) {
+						case 0:
+							if (fenceLocY == 1 || fenceLocY == 2)
+								relevantType = t.getFenceType(caveLayer, Tile.LEFT_FENCE) - 1;
+							break;
+						case 1:
+						case 2:
+							if (fenceLocY == 0) {
+								relevantType = t.getFenceType(caveLayer, Tile.TOP_FENCE);
+							} else if (fenceLocY == 3) {
+								relevantType = downTile.getFenceType(caveLayer, Tile.TOP_FENCE);
+							}
+							break;
+						case 3:
+							if (fenceLocY == 1 || fenceLocY == 2) {								
+								relevantType = rightTile.getFenceType(caveLayer, Tile.LEFT_FENCE) - 1;
+							}
+							break;
+					}
+					
+					if (mainWindow.getSelectedFence() != relevantType)
+						mainWindow.forceSelection(ImageType.FENCE, relevantType);
+					break;
+				case OVERLAY_PENCIL:
+					if (t.getOverlayColor(caveLayer) != c)
+						undoManager.addAction(new OverlayChange(t, c, caveLayer));
+					break;
+				case OVERLAY_BRUSH:
+					undoManager.addAction(new BrushOverlayChange(map, x, y, mainWindow.getBrushSize(), c, caveLayer));
+					break;
+				case OVERLAY_ERASER:
+					c = null;
+					if (t.getOverlayColor(caveLayer) != c)
+						undoManager.addAction(new OverlayChange(t, c, caveLayer));
+					break;
+				case OVERLAY_PICKER:
+					mainWindow.setOverlayColor(t.getOverlayColor(caveLayer));
+					break;
+				case LABEL:
+					LabelDialog d = new LabelDialog();
+					undoManager.addAction(new LabelChange(t, d.getLabel(), mainWindow.getLabelColor(), caveLayer));
+					d.dispose();
 					break;
 				default:
-					;
+					Logger.log("Unhandled State: " + currentState);
+					break;
 			}
 		}
-		
-		/*if (parent.tabbedEditor.getSelectedIndex() == 0) { //TERRAIN
-			if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight())
-				if (parent.normalTool.isSelected()) {
-					if (parent.rbnTerrain.getSelection() != null) {
-						String tile = parent.rbnTerrain.getSelection().getActionCommand();
-						int tileType = parent.terrainKeyList.indexOf(tile);
-						
-						t.setTerrainType(caveLayer, (byte) tileType);
-							
-						if (tile.contains("distance-cave"))
-							t.setTerrainType(!caveLayer, (byte) tileType);
-					}
-				} else if (parent.fillTool.isSelected()) {
-					if (parent.rbnTerrain.getSelection() != null) {
-						String tile = parent.rbnTerrain.getSelection().getActionCommand();
-						int tileType = parent.terrainKeyList.indexOf(tile);
-						
-						terrainFill(t, t.getTerrainType(caveLayer), (byte) tileType, caveLayer);
-					}
-				} else if (parent.pickerTool.isSelected()) {
-					int tileType = t.getTerrainType(caveLayer);
-					String tile = parent.terrainKeyList.get((tileType == -1 ? 0 : tileType));
-					
-					parent.terrainBtnList.get(tile).doClick();
-					parent.normalTool.doClick();
-				}
-		}*/
-		
-		/* else if (parent.tabbedEditor.getSelectedIndex() == 1) { //OBJECTS
-			if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight())
-				if (parent.normalTool.isSelected()) {
-					if (parent.rbnObjects.getSelection() != null) {
-						String object = parent.rbnObjects.getSelection().getActionCommand();
-						int objectType = parent.objectKeyList.indexOf(object);
-												
-						float locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
-						float locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
-						float id = (locY * 3) + locX;
-						
-						if (id < 9) {
-							t.setObjectType(caveLayer, (int) id, (byte) objectType);
-							t.setObjectRotation(caveLayer, (int) id, (byte) 0);
-						}
-					}
-				} else if (parent.pickerTool.isSelected()) {
-					int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 3));
-					int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 3));
-					int id = (locY * 3) + locX;
-					
-					int objType = t.getObjectType(caveLayer, id);
-					String object = parent.objectKeyList.get((objType == -1 ? 0 : objType));
-					
-					parent.objectBtnList.get(object).doClick();
-					parent.normalTool.doClick();
-				}
-		} else if (parent.tabbedEditor.getSelectedIndex() == 2) { //FENCES
-			if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight())
-				if (parent.normalTool.isSelected()) {
-					if (parent.rbnFences.getSelection() != null) {
-						String fence = parent.rbnFences.getSelection().getActionCommand();
-						int fenceType = parent.fenceKeyList.indexOf(fence);
-						int fenceTypeVert = parent.fenceKeyList.indexOf(fence + "_1");
-						
-						int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 4));
-						int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 4));
-						
-						Tile rightTile = map.getTile(x + 1, y);
-						Tile downTile = map.getTile(x, y + 1);
-						
-						if (locX == 1 || locX == 2) {
-							if (locY == 0)
-								t.setFenceType(caveLayer, Tile.TOP_FENCE, (byte) fenceType);
-							else if (locY == 3) {
-								if (downTile != null)
-									downTile.setFenceType(caveLayer, Tile.TOP_FENCE, (byte) fenceType);
-								else {
-									if (y + 1 < map.getMapHeight()) {
-										downTile = new Tile(x, y + 1);
-										downTile.setFenceType(caveLayer, Tile.TOP_FENCE, (byte) fenceType);
-										map.addTile(x, y + 1, downTile);
-									}
-								}
-							}
-						} else if (locX == 0) {
-							if (locY == 1 || locY == 2)
-								t.setFenceType(caveLayer, Tile.LEFT_FENCE, (byte) fenceTypeVert);
-						} else if (locX == 3) {
-							if (locY == 1 || locY == 2)
-								if (rightTile != null) 
-									rightTile.setFenceType(caveLayer, Tile.LEFT_FENCE, (byte) fenceTypeVert);
-								else {
-									if (x + 1 < map.getMapWidth()) {
-										rightTile = new Tile(x + 1, y);
-										rightTile.setFenceType(caveLayer, Tile.LEFT_FENCE, (byte) fenceTypeVert);
-										map.addTile(x + 1, y, rightTile);
-									}
-								}
-						}					
-					}
-				} else if (parent.pickerTool.isSelected()) {
-					int locX = (int) ((p.getX() - (x * tileSize)) / (tileSize / 4));
-					int locY = (int) ((p.getY() - (y * tileSize)) / (tileSize / 4));
-					
-					Tile rightTile = map.getTile(x + 1, y);
-					Tile downTile = map.getTile(x, y + 1);
-					
-					int fenceType = 0;
-					
-					if (locX == 1 || locX == 2) {
-						if (locY == 0) {
-							fenceType = t.getFenceType(caveLayer, Tile.TOP_FENCE);
-						} else if (locY == 3) {
-							if (downTile != null)
-								fenceType = downTile.getFenceType(caveLayer, Tile.TOP_FENCE);
-						}
-					} else if (locX == 0) {
-						if (locY == 1 || locY == 2) {
-							fenceType = t.getFenceType(caveLayer, Tile.LEFT_FENCE);
-						}
-					} else if (locX == 3) {
-						if (locY == 1 || locY == 2) {
-							if (rightTile != null)
-								fenceType = rightTile.getFenceType(caveLayer, Tile.LEFT_FENCE);
-						}
-					}
-					
-					String fence = parent.fenceKeyList.get((fenceType == -1 ? 0 : fenceType));
-					if (fence.endsWith("_1"))
-						fence = fence.substring(0, fence.lastIndexOf("_"));
-					
-					parent.fenceBtnList.get(fence).doClick();
-					parent.normalTool.doClick();
-				}
-		} else if (parent.tabbedEditor.getSelectedIndex() == 3) { //MISC
-			if (x < map.getMapWidth() && x >= 0 && y >= 0 && y < map.getMapHeight())
-				if (parent.miscOverlay.isSelected()) {
-					if (parent.normalTool.isSelected()) {
-						t.setOverlayColor(caveLayer, parent.miscOverlayColor);
-					} else if (parent.pickerTool.isSelected()) {
-						parent.miscOverlayColor = t.getOverlayColor(caveLayer);
-						parent.miscOpacity.setValue(parent.miscOverlayColor.getAlpha());
-						parent.updatePreview();
-						
-						parent.normalTool.doClick();
-					}
-				} else if (parent.miscText.isSelected()) {
-					if (parent.normalTool.isSelected()) {
-						t.setLabelColor(caveLayer, parent.miscTextColor);
-						t.setLabel(caveLayer, (String) JOptionPane.showInputDialog(parent, "Enter label (Cancel to delete label): ", "Create label", JOptionPane.PLAIN_MESSAGE, null, null, t.getLabel(caveLayer)));
-					} else if (parent.pickerTool.isSelected()) {
-						parent.miscOverlayColor = t.getLabelColor(caveLayer);
-						parent.miscOpacity.setValue(parent.miscOverlayColor.getAlpha());
-						parent.updatePreview();
-						
-						parent.normalTool.doClick();
-					}
-				}
-
-		}*/
 		
 		repaint();
 	}
@@ -521,6 +857,5 @@ public class GraphicPanel extends JPanel {
 		}
 		
 		repaint();
-	}
-	
+	}	
 }

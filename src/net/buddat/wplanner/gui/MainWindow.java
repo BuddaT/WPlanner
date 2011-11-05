@@ -3,15 +3,20 @@ package net.buddat.wplanner.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.Image;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -23,15 +28,19 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 
+import net.buddat.wplanner.WPlanner;
 import net.buddat.wplanner.gui.GraphicPanel.EditState;
 import net.buddat.wplanner.gui.resources.ResourceManager;
+import net.buddat.wplanner.gui.resources.ResourceManager.ImageType;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.util.Constants;
-import net.buddat.wplanner.util.Logger;
 
 import javax.swing.JButton;
 import javax.swing.BoxLayout;
@@ -43,8 +52,9 @@ import java.awt.Component;
 import java.util.Enumeration;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
+import java.io.File;
 
-public class MainWindow extends JFrame implements ActionListener, ChangeListener {
+public class MainWindow extends JFrame implements ActionListener, ChangeListener, WindowListener {
 
 	private static final long serialVersionUID = 6408703853685252009L;
 	
@@ -57,15 +67,23 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 			CMD_UNDO = "undo", CMD_REDO = "redo", CMD_RESIZEMAP = "resizemap",
 			CMD_ZOOMIN = "zoomin", CMD_ZOOMOUT = "zoomout", 
 			CMD_HELP = "help", CMD_ABOUT = "about",
-			CMD_TERRAIN_PENCIL = "terrain_pencil", CMD_TERRAIN_BRUSH = "terrain_brush", CMD_TERRAIN_FILL = "terrain_fill", CMD_TERRAIN_ERASER = "terrain_eraser", CMD_TERRAIN_PICKER = "terrain_picker",
+			CMD_TERRAIN_PENCIL = "terrain_pencil", CMD_TERRAIN_BRUSH = "terrain_brush", CMD_TERRAIN_FILL = "terrain_fill", 
+			CMD_TERRAIN_ERASER = "terrain_eraser", CMD_TERRAIN_PICKER = "terrain_picker",
 			CMD_OBJECTS_PENCIL = "objects_pencil", CMD_OBJECTS_ERASER = "objects_eraser", CMD_OBJECTS_PICKER = "objects_picker",
 			CMD_FENCE_PENCIL = "fence_pencil", CMD_FENCE_LINE = "fence_line", CMD_FENCE_ERASER = "fence_eraser", CMD_FENCE_PICKER = "fence_picker",
 			CMD_LABEL = "label",
-			CMD_OVERLAY_PENCIL = "overlay_pencil", CMD_OVERLAY_BRUSH = "overlay_brush", CMD_OVERLAY_ERASER = "overlay_eraser", CMD_OVERLAY_PICKER = "overlay_picker", CMD_OVERLAY_COLOR = "overlay_color",
+			CMD_OVERLAY_PENCIL = "overlay_pencil", CMD_OVERLAY_BRUSH = "overlay_brush", CMD_OVERLAY_ERASER = "overlay_eraser", 
+			CMD_OVERLAY_PICKER = "overlay_picker", CMD_OVERLAY_COLOR = "overlay_color",
 			CMD_LAYERUP = "layerup", CMD_LAYERDOWN = "layerdown",
-			CMD_BRUSHSIZE = "brushsize";
+			CMD_BRUSHSIZE = "brushsize",
+			CHANGE_SELECTOR_RESIZE = "selectorsize";
+
+	private static final String TAB_SELECTOR = "tabselector";
 	
 	private int brushSize = 3;
+	private int selectedTerrain = 0, selectedObject = 0, selectedFence = 0;
+	private Color overlayColor = new Color(Color.WHITE.getRed(), Color.WHITE.getBlue(), Color.WHITE.getGreen(), 127);
+	private Color labelColor = Color.BLACK;
 	
 	JCheckBoxMenuItem chckbxmntmTerrain;
 	JCheckBoxMenuItem chckbxmntmObjects;
@@ -76,15 +94,20 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 	
 	JTabbedPane tabEditor;
 	ButtonGroup toolGroup;
+	ButtonGroup terrainGroup, objectGroup, fenceGroup;
+	
+	JTabbedPane tabSelector;
 
 	public MainWindow() {
 		init();
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setSize(800, 600);
+		setSize(WPlanner.getConfig().getWindowWidth(), WPlanner.getConfig().getWindowHeight());
 		setLocationRelativeTo(null);
 		setTitle(Constants.PROGRAM_NAME + " | v." + Constants.VERSION_MAJOR + "." + Constants.VERSION_MIDI +
 				"." + Constants.VERSION_MINOR);
+		
+		addWindowListener(this);
 		
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
@@ -465,10 +488,17 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 		panel.add(spinner);
 		
 		JSplitPane splitPane = new JSplitPane();
+		splitPane.setName(CHANGE_SELECTOR_RESIZE);
 		contentPane.add(splitPane, BorderLayout.CENTER);
 		
-		JTabbedPane tabSelector = new JTabbedPane(JTabbedPane.TOP);
+		tabSelector = new JTabbedPane(JTabbedPane.TOP);
+		tabSelector.setName(TAB_SELECTOR);
+		tabSelector.addChangeListener(this);
 		splitPane.setLeftComponent(tabSelector);
+		
+		setupSelectorTab("Terrain", ImageType.TERRAIN);
+		setupSelectorTab("Objects", ImageType.OBJECT);
+		setupSelectorTab("Fences", ImageType.FENCE);
 		
 		tabEditor = new JTabbedPane(JTabbedPane.TOP);
 		splitPane.setRightComponent(tabEditor);
@@ -512,6 +542,73 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 		setVisible(true);
 	}
 	
+	private void setupSelectorTab(String name, final ImageType type) {
+		JPanel pnl = new JPanel();
+		//TODO: FIX ME
+		pnl.setLayout(new GridLayout(0, 4));
+		final ButtonGroup btnGroup = new ButtonGroup();
+		
+		for (String img : getResources().getImageKeyList(type)) {
+			if (type == ImageType.FENCE && img.endsWith("_1"))
+				continue;
+			
+			ImageIcon imgIcon = new ImageIcon(getResources().getSelectorImage(type, img).getScaledInstance(48, 48, Image.SCALE_DEFAULT));
+			ItemSelectionPanel itemPnl = new ItemSelectionPanel(this, img, imgIcon);
+			
+			JRadioButton btn = itemPnl.getSelectionButton();
+			btnGroup.add(itemPnl.getSelectionButton());
+			
+			btn.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					Enumeration<AbstractButton> buttons = btnGroup.getElements();
+					
+					while (buttons.hasMoreElements()) {
+						JRadioButton btn = (JRadioButton) buttons.nextElement();
+						btn.setBorderPainted(false);
+				
+						if (btn.isSelected()) {
+							btn.setBorderPainted(true);
+							switch (type) {
+								case TERRAIN:
+									setSelectedTerrain(btn.getActionCommand());
+									break;
+								case OBJECT:
+									setSelectedObject(btn.getActionCommand());
+									break;
+								case FENCE:
+									setSelectedFence(btn.getActionCommand());
+									break;
+								default:
+									break;
+							}
+						}
+					}
+				}
+			});
+			
+			pnl.add(itemPnl);
+		}
+		
+		switch (type) {
+			case TERRAIN:
+				terrainGroup = btnGroup;
+				break;
+			case OBJECT:
+				objectGroup = btnGroup;
+				break;
+			case FENCE:
+				fenceGroup = btnGroup;
+				break;
+			default:
+				break;
+		}
+		
+		JScrollPane scrollTerrain = new JScrollPane(pnl, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		scrollTerrain.getVerticalScrollBar().setUnitIncrement(WPlanner.getConfig().getScrollBarIncrement());
+		
+		tabSelector.addTab(name, scrollTerrain);
+	}
+	
 	public void init() {
 		resources = new ResourceManager();
 	}
@@ -519,11 +616,13 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 	public void addMap(Map m) {
 		GraphicPanel gfx = new GraphicPanel(this, m);
 		JScrollPane graphicScroll = new JScrollPane(gfx, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-		graphicScroll.getVerticalScrollBar().setUnitIncrement(graphicScroll.getVerticalScrollBar().getUnitIncrement() * 10);
+		graphicScroll.getVerticalScrollBar().setUnitIncrement(WPlanner.getConfig().getScrollBarIncrement());
 		
 		tabEditor.addTab(m.getMapName(), graphicScroll);
 		tabEditor.setTabComponentAt(tabEditor.getTabCount() - 1, new ClosableTab(this, m.getMapName()));
 		tabEditor.setSelectedIndex(tabEditor.getTabCount() - 1);
+		
+		getSelectedToolButton().doClick();
 	}
 	
 	public void removeMap(String mapName) {
@@ -537,14 +636,61 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 		return resources;
 	}
 
-	public int getSelectedTerrainType() {
+	public void setSelectedTerrain(String terrainName) {
+		selectedTerrain = getResources().getTerrainId(terrainName);
+	}
+	
+	public void forceSelection(ImageType type, int id) {
+		String btnName = getResources().getImageKeyList(type).get(id);
 		
-		return 0;
+		Enumeration<AbstractButton> buttons; 
+		
+		switch (type) {
+			case TERRAIN:
+				buttons = terrainGroup.getElements();
+				break;
+			case OBJECT:
+				buttons = objectGroup.getElements();
+				break;
+			case FENCE:
+				buttons = fenceGroup.getElements();
+				break;
+			default:
+				return;
+		}
+		
+		while (buttons.hasMoreElements()) {
+			JRadioButton btn = (JRadioButton) buttons.nextElement();
+	
+			if (btn.getActionCommand().equals(btnName)) {
+				btn.doClick();
+				return;
+			}
+		}
+	}
+	
+	public int getSelectedTerrain() {
+		return selectedTerrain;
+	}
+	
+	public void setSelectedObject(String objectName) {
+		selectedObject = getResources().getObjectId(objectName);
+	}
+	
+	public int getSelectedObject() {
+		return selectedObject;
+	}
+	
+	public void setSelectedFence(String fenceName) {
+		selectedFence = getResources().getFenceId(fenceName);
+	}
+	
+	public int getSelectedFence() {
+		return selectedFence;
 	}
 
 	public boolean isCaveEntrance(int tileType) {
-		
-		return false;
+		return tileType == getResources().getTerrainId("distance-cave.jpg");
 	}
 	
 	public void setBrushSize(int newSize) {
@@ -554,91 +700,190 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 	public int getBrushSize() {
 		return brushSize;
 	}
+	
+	public void setOverlayColor(Color c) {
+		overlayColor = c;
+	}
+
+	public Color getOverlayColor() {
+		return overlayColor;
+	}
+	
+	public void setLabelColor(Color c) {
+		labelColor = c;
+	}
+	
+	public Color getLabelColor() {
+		return labelColor;
+	}
+	
+	public void closeMaps() {
+		WPlanner.getMapManager().removeAllMaps();
+	}
+	
+	public void saveWindowSize() {
+		WPlanner.getConfig().setWindowWidth(this.getWidth(), true);
+		WPlanner.getConfig().setWindowHeight(this.getHeight(), true);
+	}
+	
+	private void updateSelectedTool() {
+		Enumeration<AbstractButton> buttons = toolGroup.getElements();
+		while (buttons.hasMoreElements()) {
+			JRadioButton btn = (JRadioButton) buttons.nextElement();
+			btn.setBorderPainted(false);
+	
+			if (btn.isSelected())
+				btn.setBorderPainted(true);
+		}
+	}
+	
+	public JRadioButton getToolButton(String tool) {
+		Enumeration<AbstractButton> buttons = toolGroup.getElements();
+		
+		while (buttons.hasMoreElements()) {
+			JRadioButton btn = (JRadioButton) buttons.nextElement();
+			if (btn.getActionCommand().equals(tool))
+				return btn;
+		}
+		
+		return null;
+	}
+	
+	public JRadioButton getSelectedToolButton() {
+		Enumeration<AbstractButton> buttons = toolGroup.getElements();
+		
+		while (buttons.hasMoreElements()) {
+			JRadioButton btn = (JRadioButton) buttons.nextElement();
+			if (btn.isSelected())
+				return btn;
+		}
+		
+		return null;
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		String actionCmd = e.getActionCommand();
-		GraphicPanel selectedPanel = (GraphicPanel) ((JScrollPane) tabEditor.getSelectedComponent()).getViewport().getComponent(0);
 		
-		Logger.log(actionCmd);
+		if (tabEditor ==  null)
+			return;
+		GraphicPanel selectedPanel = null;
+		if (tabEditor.getTabCount() > 0)
+			selectedPanel = (GraphicPanel) ((JScrollPane) tabEditor.getSelectedComponent()).getViewport().getComponent(0);
 		
 		if (actionCmd.equals(CMD_NEW)) {
-			
+			new NewDialog();
+			return;
 		} else if (actionCmd.equals(CMD_OPEN)) {
-			
-		} else if (actionCmd.equals(CMD_SAVE)) {
-			
-		} else if (actionCmd.equals(CMD_SAVEAS)) {
-			
-		} else if (actionCmd.equals(CMD_SAVEIMG)) {
-			
-		} else if (actionCmd.equals(CMD_SAVEIMGAS)) {
-			
-		} else if (actionCmd.equals(CMD_EXIT)) {
+			JFileChooser jfc = new JFileChooser(WPlanner.getConfig().getDefaultSaveDir());
+			jfc.setFileFilter(new FileFilter() {
+				@Override
+				public boolean accept(File f) {
+					if (f.isDirectory())
+						return true;
+					
+					if (f.getAbsolutePath().endsWith(".wp2"))
+						return true;
+					
+					return false;
+				}
 
-		} else if (actionCmd.equals(CMD_UNDO)) {
+				@Override
+				public String getDescription() {
+					return "WPlanner Map (.wp2)";
+				}
+			});
+			
+			int retVal = jfc.showOpenDialog(this);
+			if (retVal == JFileChooser.APPROVE_OPTION) {
+				String mapFile = WPlanner.getMapManager().loadMap(jfc.getSelectedFile().getPath());
+				WPlanner.getMainWindow().addMap(WPlanner.getMapManager().getMap(mapFile));
+			}
+			return;
+		} else if (actionCmd.equals(CMD_EXIT)) {
+			closeMaps();
+			saveWindowSize();
+			System.exit(NORMAL);
+			return;
+		} else if (actionCmd.equals(CMD_HELP)) {
+			new HelpDialog();
+			return;
+		} else if (actionCmd.equals(CMD_ABOUT)) {
+			new AboutDialog();
+			return;
+		}
+		
+		updateSelectedTool();
+
+		if (selectedPanel == null)
+			return;
+		
+		String mapName = tabEditor.getTitleAt(tabEditor.getSelectedIndex());
+		
+		if (actionCmd.equals(CMD_SAVE)) {
+			WPlanner.getMapManager().saveMap(mapName);
+			return;
+		} else if (actionCmd.equals(CMD_SAVEAS)) {
+			WPlanner.getMapManager().openSaveDialog(mapName);
+			return;
+		} else if (actionCmd.equals(CMD_SAVEIMG)) {
+			WPlanner.getMapManager().saveMapImage(mapName, selectedPanel.getMapImage(), false);
+			return;
+		} else if (actionCmd.equals(CMD_SAVEIMGAS)) {
+			WPlanner.getMapManager().saveMapImage(mapName, selectedPanel.getMapImage(), true);			
+			return;
+		}
+		
+		if (actionCmd.equals(CMD_UNDO)) {
 			selectedPanel.undo();
 		} else if (actionCmd.equals(CMD_REDO)) {
 			selectedPanel.redo();
 		} else if (actionCmd.equals(CMD_RESIZEMAP)) {
+			selectedPanel.resizeMap();		
 		} else if (actionCmd.equals(CMD_ZOOMIN)) {
+			selectedPanel.zoomIn();
 		} else if (actionCmd.equals(CMD_ZOOMOUT)) {
-		} else if (actionCmd.equals(CMD_HELP)) {
-		} else if (actionCmd.equals(CMD_ABOUT)) {
+			selectedPanel.zoomOut();
 		} else if (actionCmd.equals(CMD_TERRAIN_PENCIL)) {
 			selectedPanel.setEditState(EditState.TERRAIN_PENCIL);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_TERRAIN_BRUSH)) {
 			selectedPanel.setEditState(EditState.TERRAIN_BRUSH);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_TERRAIN_FILL)) {
 			selectedPanel.setEditState(EditState.TERRAIN_FILL);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_TERRAIN_ERASER)) {
 			selectedPanel.setEditState(EditState.TERRAIN_ERASER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_TERRAIN_PICKER)) {
 			selectedPanel.setEditState(EditState.TERRAIN_PICKER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OBJECTS_PENCIL)) {
 			selectedPanel.setEditState(EditState.OBJECT_PENCIL);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OBJECTS_ERASER)) {
 			selectedPanel.setEditState(EditState.OBJECT_ERASER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OBJECTS_PICKER)) {
 			selectedPanel.setEditState(EditState.OBJECT_PICKER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_FENCE_PENCIL)) {
 			selectedPanel.setEditState(EditState.FENCE_PENCIL);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_FENCE_LINE)) {
 			selectedPanel.setEditState(EditState.FENCE_LINE);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_FENCE_ERASER)) {
 			selectedPanel.setEditState(EditState.FENCE_ERASER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_FENCE_PICKER)) {
 			selectedPanel.setEditState(EditState.FENCE_PICKER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_LABEL)) {
 			selectedPanel.setEditState(EditState.LABEL);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OVERLAY_PENCIL)) {
 			selectedPanel.setEditState(EditState.OVERLAY_PENCIL);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OVERLAY_BRUSH)) {
 			selectedPanel.setEditState(EditState.OVERLAY_BRUSH);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OVERLAY_ERASER)) {
 			selectedPanel.setEditState(EditState.OVERLAY_ERASER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OVERLAY_PICKER)) {
 			selectedPanel.setEditState(EditState.OVERLAY_PICKER);
-			updateSelectedTool(e);
 		} else if (actionCmd.equals(CMD_OVERLAY_COLOR)) {
+			new ColorDialog();
 		} else if (actionCmd.equals(CMD_LAYERUP)) {
+			selectedPanel.setCaveLayer(false);
 		} else if (actionCmd.equals(CMD_LAYERDOWN)) {
+			selectedPanel.setCaveLayer(true);
 		}
 	}
 	
@@ -648,15 +893,44 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 		
 		if (componentName.equals(CMD_BRUSHSIZE)) {
 			setBrushSize((Integer) ((JSpinner) e.getSource()).getValue());
+		} else if (componentName.equals(TAB_SELECTOR)) {
+			switch (tabSelector.getSelectedIndex()) {
+				case 0:
+					getToolButton(CMD_TERRAIN_PENCIL).doClick();
+					break;
+				case 1:
+					getToolButton(CMD_OBJECTS_PENCIL).doClick();
+					break;
+				case 2:
+					getToolButton(CMD_FENCE_PENCIL).doClick();
+					break;
+				default:
+					break;	
+			}
 		}
 	}
-	
-	private void updateSelectedTool(ActionEvent e) {
-		Enumeration<AbstractButton> buttons = toolGroup.getElements();
-		while (buttons.hasMoreElements())
-			((JRadioButton) buttons.nextElement()).setBorderPainted(false);
-		
-		((JRadioButton) e.getSource()).setBorderPainted(true);
+
+	@Override
+	public void windowActivated(WindowEvent arg0) { }
+
+	@Override
+	public void windowClosed(WindowEvent arg0) { }
+
+	@Override
+	public void windowClosing(WindowEvent arg0) {
+		closeMaps();
+		saveWindowSize();
 	}
-	
+
+	@Override
+	public void windowDeactivated(WindowEvent arg0) { }
+
+	@Override
+	public void windowDeiconified(WindowEvent arg0) { }
+
+	@Override
+	public void windowIconified(WindowEvent arg0) { }
+
+	@Override
+	public void windowOpened(WindowEvent arg0) { }
 }

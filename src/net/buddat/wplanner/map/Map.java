@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import javax.swing.JOptionPane;
-
 import net.buddat.wplanner.WPlanner;
 import net.buddat.wplanner.util.Constants;
 import net.buddat.wplanner.util.Logger;
@@ -77,6 +75,8 @@ public class Map {
 		}
 		
 		compressFile(fileName);
+		
+		changes = false;
 	}
 	
 	public void loadMap(String fileName) {
@@ -273,6 +273,8 @@ public class Map {
 		}
 		
 		tileMap = newMap;
+		
+		changes = true;
 	}
 	
 	public boolean hasChanges() {

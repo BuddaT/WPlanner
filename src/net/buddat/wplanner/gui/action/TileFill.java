@@ -50,7 +50,7 @@ public class TileFill implements UndoableAction {
 				
 				boolean eastDone = false;
 				while(!eastDone) {
-					if (e.getX() + 1 > map.getMapWidth()) {
+					if (e.getX() + 1 >= map.getMapWidth()) {
 						eastDone = true;
 						continue;
 					}
@@ -82,7 +82,7 @@ public class TileFill implements UndoableAction {
 							queue.add(n);
 					}
 					
-					if (fill.getY() < map.getMapHeight()) {
+					if (fill.getY() + 1 < map.getMapHeight()) {
 						Tile s = map.getTile(fill.getX(), fill.getY() + 1, true);
 						if (s == null)
 							map.addTile(fill.getX(), fill.getY() + 1, (s = new Tile(fill.getX(), fill.getY() + 1)));

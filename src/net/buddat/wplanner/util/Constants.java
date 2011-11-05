@@ -29,6 +29,12 @@ public class Constants {
 	
 	public static final String DEFAULT_SAVE_DIR = "saved/";
 	
+	public static final String DEFAULT_SINGLE_INSTANCE = "false";
+	
+	public static final String DEFAULT_WINDOW_WIDTH = "800";
+	public static final String DEFAULT_WINDOW_HEIGHT = "600";
+	public static final String DEFAULT_SCROLL_INCREMENT = "10";
+	
 	public static final String OUT_LOG = "console.log";
 	public static final String ERR_LOG = "error.log";
 	
@@ -37,6 +43,10 @@ public class Constants {
 	public static final String OPT_OBJECTS_FOLDER = "dir.objects";
 	public static final String OPT_FENCES_FOLDER = "dir.fences";
 	public static final String OPT_SAVE_DIR = "dir.save.default";
+	public static final String OPT_SINGLE_INSTANCE = "instance.single";
+	public static final String OPT_WINDOW_WIDTH = "gui.window.width";
+	public static final String OPT_WINDOW_HEIGHT = "gui.window.height";
+	public static final String OPT_SCROLL_INCREMENT = "gui.scrollbar.increment";
 	
 	public static final String GUI_PENCIL = "/gui/pencil.png";
 	public static final String GUI_BRUSH = "/gui/brush.png";
@@ -55,6 +65,9 @@ public class Constants {
 	public static final String GUI_LABEL = "/gui/label.png";
 	public static final String GUI_OVERLAY = "/gui/overlay.png";
 	public static final String GUI_COLOR_CHOOSER = "/gui/color.png";
+	public static final String GUI_LOGO = "/gui/logo.png";
+	
+	public static final String GUI_HELP = "/gui/wplanner_help.txt";
 	
 	public static final String CFG_DELIMETER = "=";
 	public static final String CFG_COMMENT = "#";
@@ -71,6 +84,13 @@ public class Constants {
 		OPT_OBJECTS_FOLDER + " " + CFG_DELIMETER + " " + DEFAULT_DATA_DIR + DEFAULT_OBJECTS_FOLDER,
 		OPT_FENCES_FOLDER + " " + CFG_DELIMETER + " " + DEFAULT_DATA_DIR + DEFAULT_FENCES_FOLDER,
 		"",
-		OPT_SAVE_DIR + " " + CFG_DELIMETER + " " + DEFAULT_SAVE_DIR };
+		OPT_SAVE_DIR + " " + CFG_DELIMETER + " " + DEFAULT_SAVE_DIR,
+		"",
+		OPT_SINGLE_INSTANCE + " " + CFG_DELIMETER + " " + DEFAULT_SINGLE_INSTANCE,
+		"",
+		"#GUI Settings",
+		OPT_WINDOW_WIDTH + " " + CFG_DELIMETER + " " + DEFAULT_WINDOW_WIDTH,
+		OPT_WINDOW_HEIGHT + " " + CFG_DELIMETER + " " + DEFAULT_WINDOW_HEIGHT,
+		OPT_SCROLL_INCREMENT + " " + CFG_DELIMETER + " " + DEFAULT_SCROLL_INCREMENT };
 	
 }

@@ -45,7 +45,11 @@ public class ResourceManager {
 	 * 
 	 * Funnily enough, it doesn't actually use any of the resources after it does this.
 	 */
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
+	
+	public enum ImageType {
+		TERRAIN, OBJECT, FENCE
+	};
 
 	public ResourceManager() {
 		if (!DEBUG) loading = new LoadingFrame();
@@ -86,6 +90,8 @@ public class ResourceManager {
 		guiImages.put(Constants.GUI_LABEL, new ImageIcon(this.getClass().getResource(Constants.GUI_LABEL)));
 		guiImages.put(Constants.GUI_OVERLAY, new ImageIcon(this.getClass().getResource(Constants.GUI_OVERLAY)));
 		guiImages.put(Constants.GUI_COLOR_CHOOSER, new ImageIcon(this.getClass().getResource(Constants.GUI_COLOR_CHOOSER)));
+		
+		guiImages.put(Constants.GUI_LOGO, new ImageIcon(this.getClass().getResource(Constants.GUI_LOGO)));
 	}
 	
 	public void loadResources() {
@@ -211,11 +217,69 @@ public class ResourceManager {
 		return terrainImgList.get(terrainKeyList.get(id));
 	}
 	
+	public Image getTerrainImage(String name) {
+		return terrainImgList.get(name);
+	}
+	
+	public int getTerrainId(String name) {
+		return terrainKeyList.indexOf(name);
+	}
+	
 	public Image getObjectImage(int id, int rotation) {
 		return objectImgList.get(objectKeyList.get(id))[rotation];
 	}
 	
+	public Image getObjectImage(String name, int rotation) {
+		return objectImgList.get(name)[rotation];
+	}
+	
+	public int getObjectId(String name) {
+		return objectKeyList.indexOf(name);
+	}
+	
 	public boolean isLargeObject(int id) {
 		return (objectKeyList.get(id).substring(0, objectKeyList.get(id).lastIndexOf(".")).endsWith("_l"));
+	}
+
+	public Image getFenceImage(int id) {
+		return fenceImgList.get(fenceKeyList.get(id));
+	}
+	
+	public Image getFenceImage(String name) {
+		return fenceImgList.get(name);
+	}	
+	
+	public int getFenceId(String name) {
+		return fenceKeyList.indexOf(name);
+	}
+
+	public ArrayList<String> getImageKeyList(ImageType type) {
+		switch (type) {
+			case TERRAIN:
+				return terrainKeyList;
+			case OBJECT:
+				return objectKeyList;
+			case FENCE:
+				return fenceKeyList;
+			default:
+				break;
+		}
+		
+		return null;
+	}
+
+	public Image getSelectorImage(ImageType type, String img) {
+		switch (type) {
+			case TERRAIN:
+				return getTerrainImage(img);
+			case OBJECT:
+				return getObjectImage(img, 0);
+			case FENCE:
+				return getFenceImage(img);
+			default:
+				break;
+		}
+	
+		return null;
 	}
 }

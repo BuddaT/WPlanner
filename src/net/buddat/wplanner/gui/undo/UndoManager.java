@@ -2,7 +2,7 @@ package net.buddat.wplanner.gui.undo;
 
 public class UndoManager {
 
-	public static final int QUEUE_SIZE = 10;
+	public static final int QUEUE_SIZE = 20;
 	
 	private UndoableAction[] undoQueue = new UndoableAction[QUEUE_SIZE];
 	private int pos = 0;

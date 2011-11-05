@@ -15,11 +15,15 @@ public class Config {
 
 	private ArrayList<String> configContents = new ArrayList<String>();
 
+	private boolean useSingleInstance;
 	private boolean useRegistry;
 	private String wurmInstallDir;
 	private String objectsDir;
 	private String fencesDir;
 	private String defaultSaveDir;
+	
+	private int scrollBarIncrement;
+	private int windowWidth, windowHeight;
 	
 	public Config (File f) {
 		loadConfig(f);
@@ -30,6 +34,8 @@ public class Config {
 			return;
 		
 		try {
+			configContents.removeAll(configContents);
+			
 			BufferedReader br = new BufferedReader(new FileReader(f));
 			
 			String line;
@@ -53,12 +59,31 @@ public class Config {
 					setFencesDir(option, false);
 				else if (line.startsWith(Constants.OPT_SAVE_DIR))
 					setDefaultSaveDir(option, false);
+				else if (line.startsWith(Constants.OPT_SINGLE_INSTANCE))
+					setUseSingleInstance(Boolean.parseBoolean(option), false);
+				else if (line.startsWith(Constants.OPT_WINDOW_WIDTH))
+					setWindowWidth(Integer.parseInt(option), false);
+				else if (line.startsWith(Constants.OPT_WINDOW_HEIGHT))
+					setWindowHeight(Integer.parseInt(option), false);
+				else if (line.startsWith(Constants.OPT_SCROLL_INCREMENT))
+					setScrollBarIncrement(Integer.parseInt(option), false);
 			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public boolean useSingleInstance() {
+		return useSingleInstance;
+	}
+
+	public void setUseSingleInstance(boolean useSingleInstance, boolean update) {
+		this.useSingleInstance = useSingleInstance;
+		
+		if (update)
+			updateConfig(Constants.OPT_SINGLE_INSTANCE, Boolean.toString(useSingleInstance));
 	}
 
 	public boolean useRegistry() {
@@ -115,6 +140,39 @@ public class Config {
 		if (update)
 			updateConfig(Constants.OPT_SAVE_DIR, defaultSaveDir);
 	}
+
+	public int getWindowWidth() {
+		return windowWidth;
+	}
+
+	public void setWindowWidth(int windowWidth, boolean update) {
+		this.windowWidth = windowWidth;
+		
+		if (update)
+			updateConfig(Constants.OPT_WINDOW_WIDTH, Integer.toString(windowWidth));
+	}
+
+	public int getWindowHeight() {
+		return windowHeight;
+	}
+
+	public void setWindowHeight(int windowHeight, boolean update) {
+		this.windowHeight = windowHeight;
+		
+		if (update)
+			updateConfig(Constants.OPT_WINDOW_HEIGHT, Integer.toString(windowHeight));
+	}
+
+	public int getScrollBarIncrement() {
+		return scrollBarIncrement;
+	}
+	
+	public void setScrollBarIncrement(int increment, boolean update) {
+		scrollBarIncrement = increment;
+		
+		if (update)
+			updateConfig(Constants.OPT_SCROLL_INCREMENT, Integer.toString(increment));
+	}
 	
 	public ArrayList<String> getConfigContents() {
 		return configContents;
@@ -128,7 +186,7 @@ public class Config {
 		for (String s : configContents)
 			if (s.startsWith(option))
 				configContents.set(configContents.indexOf(s), option + " " + Constants.CFG_DELIMETER + " " + value);
-				
+			
 		writeConfig(Constants.CONFIG_FILE);
 	}
 	
@@ -136,6 +194,8 @@ public class Config {
 		File f = new File(file);
 		
 		try {
+			f.createNewFile();
+			
 			BufferedWriter bw = new BufferedWriter(new FileWriter(f));
 			
 			for (String s : configContents) {

@@ -1,0 +1,156 @@
+====================================================
+==========================    ======================
+==========================    ======================
+=============    =========    ======================
+=============     ========    ======================
+=    ========      =======    ======================
+==    =======   =   ======    ======================
+===    ======   ==   =====    ======================
+====    =====   ===   ====    ======================
+=====    ====   ====   ===    ======================
+======    ===   =====   ==    ======================
+=======    ==   ======   =                     =====
+========    =   =======                          ===
+=========       ========          ===========     ==
+==========      =========         ============     =
+===========     ==========   =    =============    =
+============   ===============    =============    =
+==============================    =============    =
+==============================    =============    =
+==============================    ============     =
+==============================    ===========     ==
+==============================                   ===
+==============================                 =====
+==============================    ==================
+==============================    ==================
+==============================    ==================
+==============================    ==================
+==============================    ==================
+==============================    ==================
+==============================    ==================
+====================================================
+=                                                  =
+=                      WPlanner                    =
+=                  Created by Budda                =
+=                                                  =
+=                     buddat.net                   =
+=                                                  =
+=      For use in making maps for Wurm Online      =
+=                                                  =
+====================================================
+====================================================
+
+----------------------------------------------------
+=======================CONTENTS=====================
+----------------------------------------------------
+
+1. BASICS
+- 01: Creating, Opening and Saving Maps
+- 02: Viewing Maps
+- 03: Editing Maps
+
+----------------------------------------------------
+====================================================
+----------------------------------------------------
+
+----------------------------------------------------
+=======================1.BASICS=====================
+----------------------------------------------------
+
+- 1.01: Creating, Opening and Saving Maps
+
+  To create a map, simply click on the "New" button 
+  on the toolbar, choose File>New from the Menu, or
+  use the keyboard shortcut "CTRL+N".
+
+  To open a map, either double click the map file
+  once WPlanner has been installed, or use the menu
+  after opening the program.
+  The menu items available are an "Open" button on
+  the toolbar, File>Open from the Menu, or using the
+  keyboard shortcut "CTRL+O".
+
+  When saving a map, you have two choices, either by
+  using "Save" or "Save As..." on the menu. Save As
+  will allow you to choose where the map file is
+  saved to. Save will save the map automatically to
+  the last used directory for opening or saving a
+  map. 
+  If you ever need to find this default directory,
+  you can find it in the config file, under the
+  option "dir.save.default".
+
+
+- 1.02: Viewing Maps
+
+  This version of WPlanner introduces a new feature
+  of having multiple maps open in the same program.
+  When you open or create a map, ir will open in a
+  new tab in the main WPlanner window.
+
+  To view an open map, click on the tab with the
+  name of the map you wish to view.
+
+  To close one of these maps, simply click the "X"
+  in the right hand side of the tab. If changes were
+  made to the map, you will be prompted to save
+  the map before it is closed.
+
+  To move around a single map, you can use the
+  scrollbars at the top and side of the map, or hold
+  down the middle or right mouse button then move
+  the mouse.
+
+  To zoom in and out of a map, use the zoom buttons
+  on the right hand side of the map, or use the Zoom
+  menu items under the View menu.
+  You can also use the shortcut keys "CTRL+=" to
+  zoom in, and "CTRL+-" to zoom out.
+
+
+- 1.03: Editing Maps
+
+  
+
+----------------------------------------------------
+====================================================
+----------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

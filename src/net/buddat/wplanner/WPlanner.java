@@ -25,11 +25,10 @@ public class WPlanner {
 	private static MapManager mapManager;
 	private static String baseDir;
 	private static Config config;
+	private static MainWindow mainWindow;
 
 	private MultiInstanceServer miServer;
 	private Socket clientSocket;
-	
-	private MainWindow mainWindow;
 	
 	public static void main(String[] args) {
 		new WPlanner(args);
@@ -38,26 +37,29 @@ public class WPlanner {
 	public WPlanner(String[] args) {
 		LoadingFrame loading = new LoadingFrame();
 		
-		loading.update("checking instance", 0);
-		if (isInstanceRunning()) {
-			if (args.length == 0) {
-				Logger.err("Another instance is running. Closing this instance.");
-				writeToInstance(Constants.NO_NEW_FILE_MSG);
-				
-				new CrashDialog(Constants.PROGRAM_NAME + " is already running.", null);
-			} else {
-				Logger.log("Another instance is running. Passing map file to other instance.");
-				writeToInstance(args[0]);
-			}
-			System.exit(0);
-		} else {
-			miServer = new MultiInstanceServer(this);
-			miServer.setName("MultiInstanceServer");
-			miServer.start();
-		}
-		
-		loading.update("loading config", 5);
+		loading.update("loading config", 0);
 		loadConfig();
+		
+		if (!config.useSingleInstance()) {
+			loading.update("checking instance", 5);
+			
+			if (isInstanceRunning()) {
+				if (args.length == 0) {
+					Logger.err("Another instance is running. Closing this instance.");
+					writeToInstance(Constants.NO_NEW_FILE_MSG);
+					
+					new CrashDialog(Constants.PROGRAM_NAME + " is already running.", null);
+				} else {
+					Logger.log("Another instance is running. Passing map file to other instance.");
+					writeToInstance(args[0]);
+				}
+				System.exit(0);
+			} else {
+				miServer = new MultiInstanceServer();
+				miServer.setName("MultiInstanceServer");
+				miServer.start();
+			}
+		}
 		
 		loading.update("checking resources", 30);
 		initialChecks();
@@ -75,6 +77,9 @@ public class WPlanner {
 		
 		if (args.length > 0)
 			mainWindow.addMap(mapManager.getMap(args[0]));
+		else {
+			
+		}
 	}
 
 	public void loadConfig() {
@@ -228,7 +233,7 @@ public class WPlanner {
 		return mapManager;
 	}
 	
-	public MainWindow getMainWindow() {
+	public static MainWindow getMainWindow() {
 		return mainWindow;
 	}
 

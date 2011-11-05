@@ -1,17 +1,18 @@
 package net.buddat.wplanner.gui.action;
 
+import java.awt.Color;
 import java.util.ArrayList;
 
 import net.buddat.wplanner.gui.undo.UndoableAction;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.map.Tile;
 
-public class BrushTileChange implements UndoableAction {
+public class BrushOverlayChange implements UndoableAction {
+
+	private ArrayList<OverlayChange> changeList = new ArrayList<OverlayChange>();
 	
-	private ArrayList<TileChange> tilesChanged = new ArrayList<TileChange>();
-	
-	public BrushTileChange(Map m, int x, int y, int size, byte newTile, boolean caveLayer) {
-		int distance = (size - 1) / 2;
+	public BrushOverlayChange(Map m, int x, int y, int brushSize, Color c, boolean caveLayer) {
+		int distance = (brushSize - 1) / 2;
 		
 		int xStart = (x - distance > 0 ? x - distance : 0);
 		int xEnd = (x + distance + 1 < m.getMapWidth() ? x + distance + 1 : m.getMapWidth());
@@ -27,27 +28,26 @@ public class BrushTileChange implements UndoableAction {
 					t = m.getTile(i, j, true);
 				}
 				
-				tilesChanged.add(new TileChange(m.getTile(i, j, true), newTile, caveLayer, false));
+				changeList.add(new OverlayChange(m.getTile(i, j, true), c, caveLayer));
 			}
 	}
 
 	@Override
 	public void execute() {
-		// TODO Auto-generated method stub
 
 	}
 
 	@Override
 	public void undo() {
-		for (TileChange t : tilesChanged) {
-			t.undo();
+		for (OverlayChange o : changeList) {
+			o.undo();
 		}
 	}
 
 	@Override
 	public void redo() {
-		for (TileChange t : tilesChanged) {
-			t.redo();
+		for (OverlayChange o : changeList) {
+			o.redo();
 		}
 	}
 

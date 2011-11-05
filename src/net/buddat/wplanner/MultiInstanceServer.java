@@ -13,10 +13,8 @@ public class MultiInstanceServer extends Thread {
 
 	private ServerSocket serverSocket;
 	private Socket clientSocket;
-	private WPlanner wplanner;
 	
-	public MultiInstanceServer(WPlanner parent) {
-		wplanner = parent;
+	public MultiInstanceServer() {
 	}
 	
 	@Override
@@ -35,9 +33,9 @@ public class MultiInstanceServer extends Thread {
 					Logger.log("No new map file specified.");
 				else {
 					Logger.log("Recieved map to open from another instance.");
-					String mapName = wplanner.getMapManager().loadMap(newFile);
+					String mapName = WPlanner.getMapManager().loadMap(newFile);
 					
-					wplanner.getMainWindow().addMap(wplanner.getMapManager().getMap(mapName));
+					WPlanner.getMainWindow().addMap(WPlanner.getMapManager().getMap(mapName));
 				}
 			}
 		} catch (IOException ioe) {
