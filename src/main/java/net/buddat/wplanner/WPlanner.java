@@ -1,5 +1,14 @@
 package net.buddat.wplanner;
 
+import net.buddat.wplanner.config.Config;
+import net.buddat.wplanner.gui.CrashDialog;
+import net.buddat.wplanner.gui.LoadingFrame;
+import net.buddat.wplanner.gui.MainWindow;
+import net.buddat.wplanner.map.MapManager;
+import net.buddat.wplanner.util.Constants;
+import net.buddat.wplanner.util.Logger;
+
+import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -9,16 +18,6 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
-
-import javax.swing.JFileChooser;
-
-import net.buddat.wplanner.config.Config;
-import net.buddat.wplanner.gui.CrashDialog;
-import net.buddat.wplanner.gui.LoadingFrame;
-import net.buddat.wplanner.gui.MainWindow;
-import net.buddat.wplanner.map.MapManager;
-import net.buddat.wplanner.util.Constants;
-import net.buddat.wplanner.util.Logger;
 
 public class WPlanner {
 	

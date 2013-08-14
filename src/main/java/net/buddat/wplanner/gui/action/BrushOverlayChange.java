@@ -1,11 +1,11 @@
 package net.buddat.wplanner.gui.action;
 
-import java.awt.Color;
-import java.util.ArrayList;
-
 import net.buddat.wplanner.gui.undo.UndoableAction;
 import net.buddat.wplanner.map.Map;
 import net.buddat.wplanner.map.Tile;
+
+import java.awt.*;
+import java.util.ArrayList;
 
 public class BrushOverlayChange implements UndoableAction {
 

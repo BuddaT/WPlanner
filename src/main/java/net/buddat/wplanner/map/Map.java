@@ -1,20 +1,15 @@
 package net.buddat.wplanner.map;
 
-import java.awt.Point;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import net.buddat.wplanner.WPlanner;
+import net.buddat.wplanner.util.Constants;
+import net.buddat.wplanner.util.Logger;
+
+import java.awt.*;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
-import net.buddat.wplanner.WPlanner;
-import net.buddat.wplanner.util.Constants;
-import net.buddat.wplanner.util.Logger;
 
 public class Map {
 

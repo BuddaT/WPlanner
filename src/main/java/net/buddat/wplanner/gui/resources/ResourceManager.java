@@ -1,28 +1,20 @@
 package net.buddat.wplanner.gui.resources;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-
 import net.buddat.wplanner.WPlanner;
 import net.buddat.wplanner.gui.LoadingFrame;
 import net.buddat.wplanner.util.Constants;
 import net.buddat.wplanner.util.Logger;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class ResourceManager {
 

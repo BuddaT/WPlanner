@@ -1,12 +1,8 @@
 package net.buddat.wplanner.gui;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.Color;
-import javax.swing.JLabel;
-import javax.swing.JProgressBar;
-import java.awt.GridLayout;
+import java.awt.*;
 
 public class LoadingFrame extends JFrame {
 
