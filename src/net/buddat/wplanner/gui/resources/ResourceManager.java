@@ -119,6 +119,9 @@ public class ResourceManager {
 			while (e.hasMoreElements())
 				if ((je = e.nextElement()) != null)
 					if (!je.isDirectory() && je.getName().contains("texture/terrain/")) {
+						if (!je.getName().endsWith("png") && !je.getName().endsWith("jpg")) 
+							continue;
+						
 						terrainImgList.put(je.getName().substring(je.getName().lastIndexOf("/") + 1), 
 								ImageIO.read(jf.getInputStream(je)).getScaledInstance(128, 128, Image.SCALE_SMOOTH));
 						if (!DEBUG) loading.setProgress(test++);
@@ -214,7 +217,10 @@ public class ResourceManager {
 	}
 	
 	public Image getTerrainImage(int id) {
-		return terrainImgList.get(terrainKeyList.get(id));
+		if (terrainKeyList.size() > id)
+			return terrainImgList.get(terrainKeyList.get(id));
+		else
+			return terrainImgList.get(terrainKeyList.get(0));
 	}
 	
 	public Image getTerrainImage(String name) {

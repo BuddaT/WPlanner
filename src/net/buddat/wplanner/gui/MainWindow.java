@@ -200,6 +200,18 @@ public class MainWindow extends JFrame implements ActionListener, ChangeListener
 		mntmZoomOut.addActionListener(this);
 		mnView.add(mntmZoomOut);
 		
+		JMenuItem mntmLyrUp = new JMenuItem("Layer Up");
+		mntmLyrUp.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, InputEvent.CTRL_MASK));
+		mntmLyrUp.setActionCommand(CMD_LAYERUP);
+		mntmLyrUp.addActionListener(this);
+		mnView.add(mntmLyrUp);
+		
+		JMenuItem mntmLyrDown = new JMenuItem("Layer Down");
+		mntmLyrDown.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_MASK));
+		mntmLyrDown.setActionCommand(CMD_LAYERDOWN);
+		mntmLyrDown.addActionListener(this);
+		mnView.add(mntmLyrDown);
+		
 		JSeparator separator_3 = new JSeparator();
 		mnView.add(separator_3);
 		
