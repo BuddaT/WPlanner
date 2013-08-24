@@ -33,10 +33,8 @@ public class Config {
 		if (!f.exists())
 			return;
 		
-		try {
+		try (BufferedReader br = new BufferedReader(new FileReader(f))) {
 			configContents.removeAll(configContents);
-			
-			BufferedReader br = new BufferedReader(new FileReader(f));
 			
 			String line;
 			while ((line = br.readLine()) != null) {
